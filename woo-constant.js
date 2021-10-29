@@ -2,7 +2,7 @@ import http from 'k6/http'
 import { SharedArray } from 'k6/data'
 import { Rate, Trend } from 'k6/metrics'
 
-import { wpMetrics } from './_helpers.js'
+import { sample, wpMetrics } from './lib/helpers.js'
 
 export const options = {
     scenarios: {
@@ -27,7 +27,7 @@ const msCache = new Trend('ms_cache', true)
 const msCacheRatio = new Trend('ms_cache_ratio')
 
 export default function () {
-    const url = urls[Math.floor(Math.random() * urls.length)];
+    const url = sample(urls)
     const response = http.get(url)
 
     errorRate.add(response.status >= 400)

@@ -1,24 +1,12 @@
 import http from 'k6/http'
-import { SharedArray } from 'k6/data'
 import { Rate, Trend } from 'k6/metrics'
 
-import { sample, wpMetrics } from './lib/helpers.js'
+import { sample, wpMetrics, wpSitemap } from './lib/helpers.js'
 
 export const options = {
-    scenarios: {
-        test: {
-            executor: 'ramping-vus',
-            startVUs: 0,
-            gracefulStop: '3s',
-            gracefulRampDown: '3s',
-            stages: [
-                { duration: '1m', target: 100 },
-            ],
-        },
-    },
+    vus: 20,
+    duration: '20s',
 }
-
-const urls = new SharedArray('product urls', () => JSON.parse(open('./data/products.json')))
 
 const errorRate = new Rate('error_rate')
 
@@ -29,8 +17,14 @@ const storeWrites = new Trend('store_writes')
 const msCache = new Trend('ms_cache', true)
 const msCacheRatio = new Trend('ms_cache_ratio')
 
-export default function () {
-    const url = sample(urls)
+export function setup () {
+    const sitemap = wpSitemap('https://test.cachewerk.com/wp-sitemap.xml')
+
+    return { urls: sitemap.urls }
+}
+
+export default function (data) {
+    const url = sample(data.urls)
     const response = http.get(url)
 
     errorRate.add(response.status >= 400)
