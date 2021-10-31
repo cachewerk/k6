@@ -1,10 +1,10 @@
 import http from 'k6/http'
 import { check, group, fail, sleep } from 'k6'
-import { Rate } from 'k6/metrics'
+import { Rate, Trend } from 'k6/metrics'
 
 import faker from 'https://cdn.jsdelivr.net/npm/faker@5.5.3/dist/faker.min.js';
 
-import { rand, sample } from './lib/helpers.js'
+import { rand, sample, wpMetrics } from './lib/helpers.js'
 import { isOK, itemAddedToCart, cartHasProduct, orderWasPlaced } from './lib/helpers.js'
 
 export const options = {
@@ -24,16 +24,36 @@ export const options = {
 
 const errorRate = new Rate('errors')
 
+// metrics provided by Object Cache Pro
+const cacheHits = new Trend('cache_hits')
+const storeReads = new Trend('store_reads')
+const storeWrites = new Trend('store_writes')
+const msCache = new Trend('ms_cache', true)
+const msCacheRatio = new Trend('ms_cache_ratio')
+
 export default function () {
     const siteUrl = __ENV.SITE_URL || 'https://test.cachewerk.com'
 
+    let metrics
     let jar = new http.CookieJar()
+
+    const addResponseMetrics = (response) => {
+        if (metrics = wpMetrics(response)) {
+            cacheHits.add(metrics.hits)
+            storeReads.add(metrics.storeReads)
+            storeWrites.add(metrics.storeWrites)
+            msCache.add(metrics.msCache)
+            msCacheRatio.add(metrics.msCacheRatio)
+        }
+    }
 
     const categories = group('Load homepage', function () {
         const response = http.get(siteUrl, { jar })
 
         check(response, { isOK })
             || (errorRate.add(1) && fail('status code was *not* 200'))
+
+        addResponseMetrics(response)
 
         return response.html()
             .find('li.product-category > a')
@@ -50,6 +70,8 @@ export default function () {
         check(response, { isOK })
             || (errorRate.add(1) && fail('status code was *not* 200'))
 
+        addResponseMetrics(response)
+
         return response.html()
             .find('.products .woocommerce-loop-product__link')
             .map((idx, el) => el.attr('href'))
@@ -63,6 +85,8 @@ export default function () {
 
         check(response, { isOK })
             || (errorRate.add(1) && fail('status code was *not* 200'))
+
+        addResponseMetrics(response)
 
         const fields = response.html()
             .find('.input-text.qty')
@@ -84,6 +108,8 @@ export default function () {
 
         check(formResponse, { itemAddedToCart })
             || fail('items *not* added to cart')
+
+        addResponseMetrics(formResponse)
     })
 
     sleep(rand(2, 5))
@@ -96,6 +122,8 @@ export default function () {
 
         check(response, { cartHasProduct })
             || fail('cart was empty')
+
+        addResponseMetrics(response)
     })
 
     sleep(rand(2, 5))
@@ -105,6 +133,8 @@ export default function () {
 
         check(response, { isOK })
             || (errorRate.add(1) && fail('status code was *not* 200'))
+
+        addResponseMetrics(response)
 
         const formResponse = response.submitForm({
             formSelector: 'form[name="checkout"]',
@@ -127,5 +157,7 @@ export default function () {
 
         check(formResponse, { orderWasPlaced })
             || fail('was was *not* placed')
+
+        addResponseMetrics(formResponse)
     })
 }
