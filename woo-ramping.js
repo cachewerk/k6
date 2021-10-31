@@ -4,7 +4,8 @@ import { Rate } from 'k6/metrics'
 
 import faker from 'https://cdn.jsdelivr.net/npm/faker@5.5.3/dist/faker.min.js';
 
-import { rand, sample, isOK } from './lib/helpers.js'
+import { rand, sample } from './lib/helpers.js'
+import { isOK, itemAddedToCart, cartHasProduct, orderWasPlaced } from './lib/helpers.js'
 
 export const options = {
     throw: true,
@@ -81,9 +82,8 @@ export default function () {
         check(formResponse, { isOK })
             || (errorRate.add(1) && fail('status code was *not* 200'))
 
-        check(formResponse, {
-            'item added to cart': (response) => response.body.includes('has been added to your cart'),
-        }) || fail('items *not* added to cart')
+        check(formResponse, { itemAddedToCart })
+            || fail('items *not* added to cart')
     })
 
     sleep(rand(2, 5))
@@ -94,9 +94,8 @@ export default function () {
         check(response, { isOK })
             || (errorRate.add(1) && fail('status code was *not* 200'))
 
-        check(response, {
-            'cart has product': (response) => response.html().find('.woocommerce-cart-form').size() === 1,
-        }) || fail('cart was empty')
+        check(response, { cartHasProduct })
+            || fail('cart was empty')
     })
 
     sleep(rand(2, 5))
@@ -126,8 +125,7 @@ export default function () {
             },
         })
 
-        check(formResponse, {
-            'order is successful': (response) => response.html().find('.entry-title').text().includes('Order received'),
-        }) || fail('was was *not* placed')
+        check(formResponse, { orderWasPlaced })
+            || fail('was was *not* placed')
     })
 }
