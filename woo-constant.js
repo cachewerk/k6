@@ -22,12 +22,12 @@ export const options = {
 const errorRate = new Rate('errors')
 
 export default function () {
-    const baseUrl = 'https://test.cachewerk.com'
+    const siteUrl = __ENV.SITE_URL || 'https://test.cachewerk.com'
 
     let jar = new http.CookieJar()
 
     const categories = group('Load homepage', function () {
-        const response = http.get(baseUrl, { jar })
+        const response = http.get(siteUrl, { jar })
 
         check(response, { isOK })
             || (errorRate.add(1) && fail('status code was *not* 200'))
@@ -86,7 +86,7 @@ export default function () {
     sleep(rand(2, 5))
 
     group('Load cart', function () {
-        const response = http.get(`${baseUrl}/cart`, { jar })
+        const response = http.get(`${siteUrl}/cart`, { jar })
 
         check(response, { isOK })
             || (errorRate.add(1) && fail('status code was *not* 200'))
@@ -98,7 +98,7 @@ export default function () {
     sleep(rand(2, 5))
 
     group('Place holder', function () {
-        const response = http.get(`${baseUrl}/checkout`, { jar })
+        const response = http.get(`${siteUrl}/checkout`, { jar })
 
         check(response, { isOK })
             || (errorRate.add(1) && fail('status code was *not* 200'))

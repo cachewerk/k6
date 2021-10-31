@@ -18,7 +18,8 @@ const msCache = new Trend('ms_cache', true)
 const msCacheRatio = new Trend('ms_cache_ratio')
 
 export function setup () {
-    const sitemap = wpSitemap('https://test.cachewerk.com/wp-sitemap.xml')
+    const siteUrl = __ENV.SITE_URL || 'https://test.cachewerk.com'
+    const sitemap = wpSitemap(`${siteUrl}/wp-sitemap.xml`)
 
     return { urls: sitemap.urls }
 }
