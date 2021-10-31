@@ -8,7 +8,7 @@ export const options = {
     duration: '20s',
 }
 
-const errorRate = new Rate('error_rate')
+const errorRate = new Rate('errors')
 
 // metrics provided by Object Cache Pro
 const cacheHits = new Trend('cache_hits')
