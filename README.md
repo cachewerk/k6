@@ -4,8 +4,8 @@ Make sure [k6 is installed](https://k6.io/docs/getting-started/installation/).
 
 ```
 k6 run wp.js
-k6 run woo-ramping.js
-k6 run woo-constant.js
+
+k6 run woo-checkout.js
 ```
 
 ## Reset WooCommerce orders

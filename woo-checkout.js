@@ -10,7 +10,16 @@ import { isOK, itemAddedToCart, cartHasProduct, orderWasPlaced } from './lib/hel
 export const options = {
     throw: true,
     scenarios: {
-        test: {
+        ramping: {
+            executor: 'ramping-vus',
+            startVUs: 1,
+            gracefulStop: '10s',
+            gracefulRampDown: '10s',
+            stages: [
+                { duration: '1m', target: 100 },
+            ],
+        },
+        constant: {
             executor: 'constant-vus',
             vus: 100,
             duration: '1m',
@@ -31,8 +40,13 @@ const msCacheRatio = new Trend('ms_cache_ratio')
 export default function () {
     const siteUrl = __ENV.SITE_URL || 'https://test.cachewerk.com'
 
+    const pause = {
+        min: 3,
+        max: 8,
+    }
+
     let metrics
-    let jar = new http.CookieJar()
+    const jar = new http.CookieJar()
 
     const addResponseMetrics = (response) => {
         if (metrics = wpMetrics(response)) {
@@ -58,7 +72,7 @@ export default function () {
             .filter(href => ! href.includes('/decor/'))
     })
 
-    sleep(rand(2, 5))
+    sleep(rand(pause.min, pause.max))
 
     const products = group('Load category', function () {
         const category = sample(categories)
@@ -74,7 +88,7 @@ export default function () {
             .map((idx, el) => el.attr('href'))
     })
 
-    sleep(rand(2, 5))
+    sleep(rand(pause.min, pause.max))
 
     group('Load and add product to cart', function () {
         const product = sample(products)
@@ -109,7 +123,7 @@ export default function () {
         addResponseMetrics(formResponse)
     })
 
-    sleep(rand(2, 5))
+    sleep(rand(pause.min, pause.max))
 
     group('Load cart', function () {
         const response = http.get(`${siteUrl}/cart`, { jar })
@@ -123,7 +137,7 @@ export default function () {
         addResponseMetrics(response)
     })
 
-    sleep(rand(2, 5))
+    sleep(rand(pause.min, pause.max))
 
     group('Place holder', function () {
         const response = http.get(`${siteUrl}/checkout`, { jar })
@@ -133,23 +147,25 @@ export default function () {
 
         addResponseMetrics(response)
 
+        const fields = {
+            billing_first_name: faker.name.firstName(),
+            billing_last_name: faker.name.lastName(),
+            billing_company: faker.datatype.boolean() ? faker.company.companyName() : null,
+            billing_country: 'US',
+            billing_state: faker.address.stateAbbr(),
+            billing_address_1: faker.address.streetAddress(),
+            billing_address_2: faker.datatype.boolean() ? faker.address.secondaryAddress() : null,
+            billing_city: faker.address.city(),
+            billing_postcode: faker.address.zipCodeByState('DE'),
+            billing_phone: faker.phone.phoneNumberFormat(),
+            billing_email: faker.internet.exampleEmail(),
+            order_comments: faker.datatype.boolean() ? faker.lorem.sentences() : null,
+        }
+
         const formResponse = response.submitForm({
             formSelector: 'form[name="checkout"]',
             params: { jar },
-            fields: {
-                billing_first_name: faker.name.firstName(),
-                billing_last_name: faker.name.lastName(),
-                billing_company: faker.datatype.boolean() ? faker.company.companyName() : null,
-                billing_country: 'US',
-                billing_state: faker.address.stateAbbr(),
-                billing_address_1: faker.address.streetAddress(),
-                billing_address_2: faker.datatype.boolean() ? faker.address.secondaryAddress() : null,
-                billing_city: faker.address.city(),
-                billing_postcode: faker.address.zipCodeByState('DE'),
-                billing_phone: faker.phone.phoneNumber(),
-                billing_email: faker.internet.exampleEmail(),
-                order_comments: faker.datatype.boolean() ? faker.lorem.sentences() : null,
-            },
+            fields,
         })
 
         check(formResponse, { orderWasPlaced })
