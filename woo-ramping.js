@@ -156,7 +156,7 @@ export default function () {
         })
 
         check(formResponse, { orderWasPlaced })
-            || fail('was was *not* placed')
+            || fail('order was *not* placed')
 
         addResponseMetrics(formResponse)
     })
