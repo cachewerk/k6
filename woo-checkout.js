@@ -19,12 +19,12 @@ export const options = {
                 { duration: '1m', target: 100 },
             ],
         },
-        constant: {
-            executor: 'constant-vus',
-            vus: 100,
-            duration: '1m',
-            gracefulStop: '10s',
-        },
+        // constant: {
+        //     executor: 'constant-vus',
+        //     vus: 100,
+        //     duration: '1m',
+        //     gracefulStop: '10s',
+        // },
     },
 }
 
