@@ -2,7 +2,7 @@ import http from 'k6/http'
 import { check, group, fail, sleep } from 'k6'
 import { Rate, Trend } from 'k6/metrics'
 
-import faker from 'https://cdn.jsdelivr.net/npm/faker@5.5.3/dist/faker.min.js';
+import faker from 'https://cdn.jsdelivr.net/npm/faker@5.5.3/dist/faker.min.js'
 
 import { rand, sample, wpMetrics } from './lib/helpers.js'
 import { isOK, itemAddedToCart, cartHasProduct, orderWasPlaced } from './lib/helpers.js'
