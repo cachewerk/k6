@@ -4,7 +4,7 @@ import { Rate, Trend } from 'k6/metrics'
 
 import faker from 'https://cdn.jsdelivr.net/npm/faker@5.5.3/dist/faker.min.js'
 
-import { rand, sample, wpMetrics } from './lib/helpers.js'
+import { rand, sample, wpMetrics, bypassPageCacheCookies } from './lib/helpers.js'
 import { isOK, itemAddedToCart, cartHasProduct, orderWasPlaced } from './lib/helpers.js'
 
 export const options = {
@@ -38,15 +38,15 @@ const msCache = new Trend('ms_cache', true)
 const msCacheRatio = new Trend('ms_cache_ratio')
 
 export default function () {
+    let metrics
+
+    const jar = new http.CookieJar()
     const siteUrl = __ENV.SITE_URL || 'https://test.cachewerk.com'
 
     const pause = {
         min: 3,
         max: 8,
     }
-
-    let metrics
-    const jar = new http.CookieJar()
 
     const addResponseMetrics = (response) => {
         if (metrics = wpMetrics(response)) {
@@ -56,6 +56,12 @@ export default function () {
             msCache.add(metrics.msCache)
             msCacheRatio.add(metrics.msCacheRatio)
         }
+    }
+
+    if (__ENV.BYPASS_CACHE) {
+        Object.entries(bypassPageCacheCookies()).forEach(([key, value]) => {
+            jar.set(siteUrl, key, value, { path: '/' })
+        })
     }
 
     const categories = group('Load homepage', function () {

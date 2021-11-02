@@ -1,7 +1,7 @@
 import http from 'k6/http'
 import { Rate, Trend } from 'k6/metrics'
 
-import { sample, wpMetrics, wpSitemap } from './lib/helpers.js'
+import { sample, wpMetrics, wpSitemap, bypassPageCacheCookies } from './lib/helpers.js'
 
 export const options = {
     vus: 20,
@@ -25,8 +25,10 @@ export function setup () {
 }
 
 export default function (data) {
+    let cookies = __ENV.BYPASS_CACHE ? bypassPageCacheCookies() : {}
+
     const url = sample(data.urls)
-    const response = http.get(url)
+    const response = http.get(url, { cookies })
 
     errorRate.add(response.status >= 400)
 
