@@ -6,11 +6,22 @@ We use these script to benchmark Object Cache Pro and Relay with various hosting
 
 Make sure [k6 is installed](https://k6.io/docs/getting-started/installation/), or use [k6 Cloud](https://k6.io/cloud/).
 
-## Run
+## Tests
+
+### `wp.js`
+
+Fetches all WordPress sitemaps and requests random URLs.
 
 ```
 k6 run wp.js
+k6 run --vus=100 --duration=10m wp.js
+```
 
+### `woo-checkout.js`
+
+Loads the homepage, selects and loads a random category, selects a random product and adds it to the cart, loads the cart page and then places an order.
+
+```
 k6 run woo-checkout.js
 ```
 
