@@ -5,7 +5,7 @@ import { Rate, Trend } from 'k6/metrics'
 import faker from 'https://cdn.jsdelivr.net/npm/faker@5.5.3/dist/faker.min.js'
 
 import { rand, sample, wpMetrics, bypassPageCacheCookies } from './lib/helpers.js'
-import { isOK, itemAddedToCart, cartHasProduct, orderWasPlaced } from './lib/helpers.js'
+import { isOK, itemAddedToCart, cartHasProduct, orderWasPlaced } from './lib/checks.js'
 
 export const options = {
     throw: true,
