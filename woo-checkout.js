@@ -164,7 +164,7 @@ export default function () {
             billing_city: faker.address.city(),
             billing_postcode: faker.address.zipCodeByState('DE'),
             billing_phone: faker.phone.phoneNumberFormat(),
-            billing_email: faker.internet.exampleEmail(),
+            billing_email: rand(1, 100) + '-' + faker.internet.exampleEmail(),
             order_comments: faker.datatype.boolean() ? faker.lorem.sentences() : null,
         }
 
