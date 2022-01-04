@@ -67,7 +67,7 @@ export default function () {
     const categories = group('Load homepage', function () {
         const response = http.get(siteUrl, { jar })
 
-        check(response, { isOK })
+        check(response, isOK)
             || (errorRate.add(1) && fail('status code was *not* 200'))
 
         addResponseMetrics(response)
@@ -84,7 +84,7 @@ export default function () {
         const category = sample(categories)
         const response = http.get(category, { jar })
 
-        check(response, { isOK })
+        check(response, isOK)
             || (errorRate.add(1) && fail('status code was *not* 200'))
 
         addResponseMetrics(response)
@@ -100,7 +100,7 @@ export default function () {
         const product = sample(products)
         const response = http.get(product, { jar })
 
-        check(response, { isOK })
+        check(response, isOK)
             || (errorRate.add(1) && fail('status code was *not* 200'))
 
         addResponseMetrics(response)
@@ -120,10 +120,10 @@ export default function () {
             params: { jar },
         })
 
-        check(formResponse, { isOK })
+        check(formResponse, isOK)
             || (errorRate.add(1) && fail('status code was *not* 200'))
 
-        check(formResponse, { itemAddedToCart })
+        check(formResponse, itemAddedToCart)
             || fail('items *not* added to cart')
 
         addResponseMetrics(formResponse)
@@ -134,10 +134,10 @@ export default function () {
     group('Load cart', function () {
         const response = http.get(`${siteUrl}/cart`, { jar })
 
-        check(response, { isOK })
+        check(response, isOK)
             || (errorRate.add(1) && fail('status code was *not* 200'))
 
-        check(response, { cartHasProduct })
+        check(response, cartHasProduct)
             || fail('cart was empty')
 
         addResponseMetrics(response)
@@ -148,7 +148,7 @@ export default function () {
     group('Place holder', function () {
         const response = http.get(`${siteUrl}/checkout`, { jar })
 
-        check(response, { isOK })
+        check(response, isOK)
             || (errorRate.add(1) && fail('status code was *not* 200'))
 
         addResponseMetrics(response)
@@ -174,7 +174,7 @@ export default function () {
             fields,
         })
 
-        check(formResponse, { orderWasPlaced })
+        check(formResponse, orderWasPlaced)
             || fail('order was *not* placed')
 
         addResponseMetrics(formResponse)

@@ -65,7 +65,7 @@ export default function () {
     group('Load homepage', function () {
         const response = http.get(siteUrl, { jar })
 
-        check(response, { isOK })
+        check(response, isOK)
             || (errorRate.add(1) && fail('status code was *not* 200'))
 
         addResponseMetrics(response)
@@ -76,7 +76,7 @@ export default function () {
     group('Login', function () {
         const response = http.get(`${siteUrl}/my-account/`, { jar })
 
-        check(response, { isOK })
+        check(response, isOK)
             || (errorRate.add(1) && fail('status code was *not* 200'))
 
         addResponseMetrics(response)
@@ -91,10 +91,10 @@ export default function () {
             },
         })
 
-        check(formResponse, { isOK })
+        check(formResponse, isOK)
             || (errorRate.add(1) && fail('status code was *not* 200'))
 
-        check(formResponse, { pageIsNotLogin })
+        check(formResponse, pageIsNotLogin)
             || fail('page *has* login form')
 
         addResponseMetrics(formResponse)
@@ -105,10 +105,10 @@ export default function () {
     group('Load orders', function () {
         const response = http.get(`${siteUrl}/my-account/orders/`, { jar })
 
-        check(response, { isOK })
+        check(response, isOK)
             || (errorRate.add(1) && fail('status code was *not* 200'))
 
-        check(response, { pageIsNotLogin })
+        check(response, pageIsNotLogin)
             || fail('page *has* login form')
 
         addResponseMetrics(response)
@@ -119,10 +119,10 @@ export default function () {
     group('Load orders', function () {
         const response = http.get(`${siteUrl}/my-account/orders/`, { jar })
 
-        check(response, { isOK })
+        check(response, isOK)
             || (errorRate.add(1) && fail('status code was *not* 200'))
 
-        check(response, { pageIsNotLogin })
+        check(response, pageIsNotLogin)
             || fail('page *has* login form')
 
         addResponseMetrics(response)
