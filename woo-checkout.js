@@ -75,7 +75,7 @@ export default function () {
         return response.html()
             .find('li.product-category > a')
             .map((idx, el) => String(el.attr('href')))
-            .filter(href => ! href.includes('/decor/'))
+            .filter(href => ! href.includes('/decor/')) // skip WP swag
     })
 
     sleep(rand(pause.min, pause.max))
@@ -90,7 +90,9 @@ export default function () {
         addResponseMetrics(response)
 
         return response.html()
-            .find('.products .woocommerce-loop-product__link')
+            .find('.products')
+            .find('.product:not(.product-type-variable)') // skip variable products
+            .find('.woocommerce-loop-product__link')
             .map((idx, el) => el.attr('href'))
     })
 
