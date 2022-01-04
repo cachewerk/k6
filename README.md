@@ -28,6 +28,8 @@ wp option update woocommerce_enable_signup_and_login_from_checkout yes --autoloa
 k6 run woo-checkout.js
 ```
 
+Be sure to [reset WooCommerce](#reset-woocommerce) between test runs.
+
 ### `woo-customer.js`
 
 Loads the homepage, signs in, views at orders and then their account details.
@@ -56,10 +58,11 @@ To attempt bypassing page caches without logging in, pass in `BYPASS_CACHE`:
 k6 run wp.js -e BYPASS_CACHE=1 
 ```
 
-## Reset WooCommerce orders
+## Reset WooCommerce
 
 ```
 wp post delete --force $(wp post list --post_type=shop_order --format=ids --posts_per_page=-1)
+wp user delete --yes $(wp user list --role=customer --format=ids --posts_per_page=-1)
 wp cache flush
 ```
 
