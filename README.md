@@ -36,6 +36,8 @@ Loads the homepage, signs in, views at orders and then their account details.
 k6 run woo-customer.js
 ```
 
+This script requires [seeded users](#seeding-users).
+
 ## Environment variables
 
 ### Site URL
@@ -63,8 +65,8 @@ wp cache flush
 
 ## Seeding users
 
-For test runs with logged in users, use this seed command:
+Load tests that run with logged in users, use this seed command to create 100 users:
 
 ```
-for USR_NO in {1..10000}; do wp user create "test${USR_NO}" "test${USR_NO}@example.com" --role=subscriber --user_pass=3405691582; done;
+for USR_NO in {1..100}; do wp user create "test${USR_NO}" "test${USR_NO}@example.com" --role=subscriber --user_pass=3405691582; done;
 ```

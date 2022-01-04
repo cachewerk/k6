@@ -85,7 +85,7 @@ export default function () {
             formSelector: 'form.woocommerce-form-login',
             params: { jar },
             fields: {
-                username: `test${rand(1, 10000)}`,
+                username: `test${rand(1, 100)}`,
                 password: '3405691582',
                 rememberme: 'forever',
             },
