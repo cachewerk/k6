@@ -1,9 +1,9 @@
 import http from 'k6/http'
-import { check, group, fail, sleep } from 'k6'
 import { Rate, Trend } from 'k6/metrics'
+import { check, group, fail, sleep } from 'k6'
 
-import { rand, wpMetrics, bypassPageCacheCookies } from './lib/helpers.js'
 import { isOK, pageIsNotLogin } from './lib/checks.js'
+import { rand, validateSiteUrl, responseWasCached, bypassPageCacheCookies } from './lib/helpers.js'
 
 export const options = {
     throw: true,
@@ -24,36 +24,30 @@ export const options = {
         //     gracefulStop: '10s',
         // },
     },
+    ext: {
+        loadimpact: {
+            name: 'WooCommerce account flow',
+            note: 'Loads the homepage, signs in, views at orders and then their account details.',
+            projectID: __ENV.PROJECT_ID || null
+        },
+    },
 }
 
 const errorRate = new Rate('errors')
+const responseCacheRate = new Rate('response_cached')
 
-// metrics provided by Object Cache Pro
-const cacheHits = new Trend('cache_hits')
-const storeReads = new Trend('store_reads')
-const storeWrites = new Trend('store_writes')
-const msCache = new Trend('ms_cache', true)
-const msCacheRatio = new Trend('ms_cache_ratio')
+// These metrics are provided by Object Cache Pro when `analytics.footnote` is enabled
+const metrics = new Metrics();
 
 export default function () {
-    let metrics
-
     const jar = new http.CookieJar()
-    const siteUrl = __ENV.SITE_URL || 'https://test.cachewerk.com'
+    const siteUrl = __ENV.SITE_URL
+
+    validateSiteUrl(siteUrl);
 
     const pause = {
         min: 3,
         max: 8,
-    }
-
-    const addResponseMetrics = (response) => {
-        if (metrics = wpMetrics(response)) {
-            cacheHits.add(metrics.hits)
-            storeReads.add(metrics.storeReads)
-            storeWrites.add(metrics.storeWrites)
-            msCache.add(metrics.msCache)
-            msCacheRatio.add(metrics.msCacheRatio)
-        }
     }
 
     if (__ENV.BYPASS_CACHE) {
@@ -68,7 +62,8 @@ export default function () {
         check(response, isOK)
             || (errorRate.add(1) && fail('status code was *not* 200'))
 
-        addResponseMetrics(response)
+        metrics.addResponseMetrics(response)
+        responseCacheRate.add(responseWasCached(response))
     })
 
     sleep(rand(pause.min, pause.max))
@@ -79,7 +74,8 @@ export default function () {
         check(response, isOK)
             || (errorRate.add(1) && fail('status code was *not* 200'))
 
-        addResponseMetrics(response)
+        metrics.addResponseMetrics(response)
+        responseCacheRate.add(responseWasCached(response))
 
         const formResponse = response.submitForm({
             formSelector: 'form.woocommerce-form-login',
@@ -97,7 +93,8 @@ export default function () {
         check(formResponse, pageIsNotLogin)
             || fail('page *has* login form')
 
-        addResponseMetrics(formResponse)
+        metrics.addResponseMetrics(formResponse)
+        responseCacheRate.add(responseWasCached(formResponse))
     })
 
     sleep(rand(pause.min, pause.max))
@@ -111,7 +108,8 @@ export default function () {
         check(response, pageIsNotLogin)
             || fail('page *has* login form')
 
-        addResponseMetrics(response)
+        metrics.addResponseMetrics(response)
+        responseCacheRate.add(responseWasCached(response))
     })
 
     sleep(rand(pause.min, pause.max))
@@ -125,6 +123,7 @@ export default function () {
         check(response, pageIsNotLogin)
             || fail('page *has* login form')
 
-        addResponseMetrics(response)
+        metrics.addResponseMetrics(response)
+        responseCacheRate.add(responseWasCached(response))
     })
 }

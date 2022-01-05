@@ -1,0 +1,47 @@
+#!/usr/bin/env php
+<?php
+
+$opt = getopt('s', ['client:'], $optind);
+$url = $argv[$optind] ?? null;
+$quiet = isset($opt['s']) ? true : false;
+
+if ( ! $url) {
+    fprintf(STDERR, "Must pass a site URL\n");
+    exit(1);
+}
+
+$client = $opt['client'] ?? null;
+$allowed = ['redis', 'relay', 'phpredis'];
+
+if ( ! $client || ! in_array($client, $allowed)) {
+    fprintf(STDERR, "Must pass either redis or relaay for client\n");
+    exit(1);
+}
+
+if ($client == 'redis') $client = 'phpredis';
+
+$info = @file_get_contents($url . '/relay/relay-info.php');
+if ( ! $url) {
+    fprintf(STDERR, "Failed to fetch relay info from %s\n", $url);
+    exit(1);
+}
+
+$info = json_decode($info, true);
+if ( ! $info) {
+    fprintf(STDERR, "Failed to decode relay info from %s\n", $url);
+    exit(1);
+}
+
+$actual = $info['ocp.client'] ?? null;
+if  ( ! $actual) {
+    fprintf(STDERR, "Failed to find ocp.client in relay info from %s\n", $url);
+    exit(1);
+}
+
+if ($actual === $client) {
+    if ( ! $quiet) echo "$actual === $client\n";
+    exit(0);
+} else {
+    if ( ! $quiet) echo "$actual !== $client\n";
+    exit(1);
+}

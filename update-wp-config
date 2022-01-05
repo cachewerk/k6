@@ -1,0 +1,141 @@
+#!/usr/bin/env php
+<?php
+
+define('CFG_SEARCH_PATHS', [
+    '/var/www/bjsrawpetfood',
+    '/var/www/relay/',
+    '/var/www/wpmu/',
+    '/Users/michaelgrunder/.config/valet/Sites/wpmu',
+]);
+
+function getRootPath() {
+    foreach (CFG_SEARCH_PATHS as $path) {
+        if (!is_dir($path))
+            continue;
+        if (is_file("$path/wp-config.php"))
+            return $path;
+    }
+
+    panicAbort("Can't find wp-config.php in either search path");
+}
+
+function findDefine($lines, $define) {
+    $search = "define('$define'";
+
+    foreach ($lines as $i => $line) {
+        if (strpos($line, $search) !== false)
+            return $i;
+    }
+
+    panicAbort("Can't find define '$define'");
+}
+
+function panicAbort($fmt, ...$args) {
+    fprintf(STDERR, $fmt . "\n", ...$args);
+    exit(1);
+}
+
+$opt = getopt('', ['url:', 'client:', 'prefetch:', 'split_alloptions:', 'compression:', 'disable_cron:', 'hash']);
+$set = [];
+
+$valid = [
+    'url' => ['cthulhu', 'mini'],
+    'client' => ['phpredis', 'relay'],
+    'prefetch' => false,
+    'split_alloptions' => false,
+    'compression' => ['lzf', 'lz4', 'zstd', 'none'],
+];
+
+$disable_cron = $opt['disable_cron'] ?? NULL;
+if ($disable_cron != NULL && $disable_cron != 'true' && $disable_cron != 'false')
+    $disable_cron = $disable_cron ? 'true' : 'false';
+
+foreach ($valid as $option => $type) {
+    $o = $opt[$option] ?? NULL;
+    if ($o !== NULL) {
+        if (is_array($type)) {
+            if ( ! in_array($o, $type)) {
+                panicAbort("Invalid option for '$option' (valid: " . implode(', ', $type) . ")");
+            }
+        } else if ($o != 'false' && $o != 'true') {
+            $o = $o ? 'true' : 'false';
+        }
+
+        $set[$option] = $o;
+    }
+}
+
+$path = getRootPath();
+$file = "$path/wp-config.php";
+$back = "$path/wp-config.php.bak";
+
+if ( $set && ! copy($file, $back))
+    panicAbort("Error:  Can't copy $file -> $back");
+
+if (isset($set['url'])) {
+    $v = $set['url'];
+
+    if ($v == 'mini') {
+        $v = "redis://default@192.168.0.174:6379";
+    } else if ($v == 'cthulhu') {
+        $v = "redis://default@192.168.0.148:6379";
+    } else {
+        die("Error:  Don't understand 'url' value of '$v'\n");
+    }
+    $set['url'] = $v;
+}
+
+$lines = explode("\n", file_get_contents($file));
+
+$cron_line = findDefine($lines, 'DISABLE_WP_CRON');
+if ($disable_cron !== NULL) {
+    if ($cron_line === false)
+        panicAbort("Can't find DISABLE_WP_CRON define");
+    $lines[$cron_line] = "define('DISABLE_WP_CRON', $disable_cron);";
+}
+
+$start = $end = NULL;
+foreach ($lines as $l => $line) {
+    if (strpos($line, 'WP_REDIS_CONFIG') !== false)
+        $start = $l;
+    else if ($start !== NULL && substr($line, 0, 3) === ']);')
+        $end = $l;
+}
+
+foreach ($set as $option => $value) {
+    for ($i = $start + 1; $i < $end; $i++) {
+        $line = $lines[$i];
+        if (strpos($line, "'$option'") !== false) {
+            if ($value != 'false' && $value != 'true')
+                $value = "'$value'";
+
+            $pattern = "/'$option'.*=>.*$/";
+            $replace = "'$option' => $value,";
+
+            if (($res = preg_replace($pattern, $replace, $line))) {
+                $lines[$i] = $res;
+            }
+        }
+    }
+}
+
+eval($lines[$cron_line]);
+
+$script = "";
+for ($i = $start; $i <= $end; $i++) {
+    $script .= $lines[$i] . "\n";
+}
+
+eval($script);
+
+if (isset($opt['hash'])) {
+} else {
+    echo json_encode([
+        'os' => php_uname('a'),
+        'redis' => WP_REDIS_CONFIG,
+        'disable_cron' => DISABLE_WP_CRON
+    ], JSON_PRETTY_PRINT);
+}
+
+if ($set || $disable_cron !== NULL)
+    file_put_contents($file, implode("\n", $lines));

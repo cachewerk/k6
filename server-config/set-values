@@ -1,0 +1,94 @@
+#!/usr/bin/env php
+<?php
+
+require_once __DIR__ . '/../vendor/autoload.php';
+
+use Symfony\Component\Process\Process;
+
+define('WP_SCRIPT', '/home/mike/dev/phpfarm/src/php-8.2.28/update-wp-config');
+define('DB_SCRIPT', '/home/mike/dev/phpfarm/src/php-8.2.28/update-relay-dbs');
+
+
+$opt = getopt('', ['dry-run', 'client:', 'events:', 'ratio:', 'dbs:', 'invalidations:']);
+
+$dry_run = isset($opt['dry-run']);
+
+$wp_args = ['ssh', 'hydra', WP_SCRIPT];
+$exec_wp = false;
+
+$db_args = ['ssh', 'hydra', DB_SCRIPT];
+$exec_db = false;
+
+if (isset($opt['client'])) {
+    $client = trim(strtolower($opt['client']));
+    if ($client != 'relay' && $client != 'phpredis') {
+        echo "Error: <client> must be 'relay' or 'phpredis'.\n";
+        exit(1);
+    }
+
+    $exec_wp = true;
+    $wp_args[] = '--client';
+    $wp_args[] = $client;
+}
+
+if (isset($opt['events'])) {
+    $exec_wp = true;
+    $wp_args[] = '--events';
+    $wp_args[] = $opt['events'];
+}
+
+if (isset($opt['ratio'])) {
+    $exec_wp = true;
+    $wp_args[] = '--ratio';
+    $wp_args[] = $opt['ratio'];
+}
+
+if (isset($opt['dbs'])) {
+    $exec_db = true;
+    if ($opt['dbs'] < 1 || $opt['dbs'] > 96) {
+        echo "Error: <dbs> must be between 1 and 96.\n";
+        exit(1);
+    }
+
+    $db_args[] = $opt['dbs'];
+}
+
+if (isset($opt['invalidations'])) {
+    $exec_wp = true;
+    if ($opt['invalidations'] < 0 || $opt['invalidations'] > 1) {
+        echo "Error: <invalidations> must be between 0 and 100.\n";
+        exit(1);
+    }
+
+    $wp_args[] = '--invalidations';
+    $wp_args[] = $opt['invalidations'];
+}
+
+if ($dry_run) {
+    if ($exec_wp) {
+        echo "Dry run: would execute " . implode(' ', $wp_args) . "\n";
+    }
+    if ($exec_db) {
+        echo "Dry run: would execute " . implode(' ', $db_args) . "\n";
+    }
+
+    exit(0);
+}
+
+if ($exec_wp) {
+    $process = new Process($wp_args);
+    if ($process->run() !== 0) {
+        echo "Failed to execute " . SCRIPT . " on hydra\n";
+        echo "Error: " . $process->getErrorOutput() . "\n";
+        exit(1);
+    }
+}
+
+if ($exec_db) {
+    $process = new Process($db_args);
+    if ($process->run() !== 0) {
+        echo "Failed to execute " . DB_SCRIPT . " on hydra\n";
+        echo "Error: " . $process->getErrorOutput() . "\n";
+        exit(1);
+    }
+}

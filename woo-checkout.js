@@ -1,11 +1,12 @@
 import http from 'k6/http'
-import { check, group, fail, sleep } from 'k6'
 import { Rate, Trend } from 'k6/metrics'
+import { check, group, fail, sleep } from 'k6'
+
+import Metrics from './lib/metrics.js';
+import { isOK, itemAddedToCart, cartHasProduct, orderWasPlaced } from './lib/checks.js'
+import { rand, sample, validateSiteUrl, responseWasCached, bypassPageCacheCookies } from './lib/helpers.js'
 
 import faker from 'https://cdn.jsdelivr.net/npm/faker@5.5.3/dist/faker.min.js'
-
-import { rand, sample, wpMetrics, bypassPageCacheCookies } from './lib/helpers.js'
-import { isOK, itemAddedToCart, cartHasProduct, orderWasPlaced } from './lib/checks.js'
 
 export const options = {
     throw: true,
@@ -26,36 +27,30 @@ export const options = {
         //     gracefulStop: '10s',
         // },
     },
+    ext: {
+        loadimpact: {
+            name: 'WooCommerce checkout flow',
+            note: 'Loads the homepage, selects and loads a random category, selects a random product and adds it to the cart, loads the cart page and then places an order.',
+            projectID: __ENV.PROJECT_ID || null
+        },
+    },
 }
 
 const errorRate = new Rate('errors')
+const responseCacheRate = new Rate('response_cached')
 
-// metrics provided by Object Cache Pro
-const cacheHits = new Trend('cache_hits')
-const storeReads = new Trend('store_reads')
-const storeWrites = new Trend('store_writes')
-const msCache = new Trend('ms_cache', true)
-const msCacheRatio = new Trend('ms_cache_ratio')
+// These metrics are provided by Object Cache Pro when `analytics.footnote` is enabled
+const metrics = new Metrics();
 
 export default function () {
-    let metrics
-
     const jar = new http.CookieJar()
-    const siteUrl = __ENV.SITE_URL || 'https://test.cachewerk.com'
+    const siteUrl = __ENV.SITE_URL
+
+    validateSiteUrl(siteUrl);
 
     const pause = {
         min: 3,
         max: 8,
-    }
-
-    const addResponseMetrics = (response) => {
-        if (metrics = wpMetrics(response)) {
-            cacheHits.add(metrics.hits)
-            storeReads.add(metrics.storeReads)
-            storeWrites.add(metrics.storeWrites)
-            msCache.add(metrics.msCache)
-            msCacheRatio.add(metrics.msCacheRatio)
-        }
     }
 
     if (__ENV.BYPASS_CACHE) {
@@ -70,7 +65,8 @@ export default function () {
         check(response, isOK)
             || (errorRate.add(1) && fail('status code was *not* 200'))
 
-        addResponseMetrics(response)
+        metrics.addResponseMetrics(response)
+        responseCacheRate.add(responseWasCached(response))
 
         return response.html()
             .find('li.product-category > a')
@@ -87,7 +83,8 @@ export default function () {
         check(response, isOK)
             || (errorRate.add(1) && fail('status code was *not* 200'))
 
-        addResponseMetrics(response)
+        metrics.addResponseMetrics(response)
+        responseCacheRate.add(responseWasCached(response))
 
         return response.html()
             .find('.products')
@@ -105,7 +102,8 @@ export default function () {
         check(response, isOK)
             || (errorRate.add(1) && fail('status code was *not* 200'))
 
-        addResponseMetrics(response)
+        metrics.addResponseMetrics(response)
+        responseCacheRate.add(responseWasCached(response))
 
         const fields = response.html()
             .find('.input-text.qty')
@@ -128,7 +126,8 @@ export default function () {
         check(formResponse, itemAddedToCart)
             || fail('items *not* added to cart')
 
-        addResponseMetrics(formResponse)
+        metrics.addResponseMetrics(formResponse)
+        responseCacheRate.add(responseWasCached(formResponse))
     })
 
     sleep(rand(pause.min, pause.max))
@@ -142,7 +141,8 @@ export default function () {
         check(response, cartHasProduct)
             || fail('cart was empty')
 
-        addResponseMetrics(response)
+        metrics.addResponseMetrics(response)
+        responseCacheRate.add(responseWasCached(response))
     })
 
     sleep(rand(pause.min, pause.max))
@@ -153,7 +153,8 @@ export default function () {
         check(response, isOK)
             || (errorRate.add(1) && fail('status code was *not* 200'))
 
-        addResponseMetrics(response)
+        metrics.addResponseMetrics(response)
+        responseCacheRate.add(responseWasCached(response))
 
         const fields = {
             billing_first_name: faker.name.firstName(),
@@ -179,6 +180,7 @@ export default function () {
         check(formResponse, orderWasPlaced)
             || fail('order was *not* placed')
 
-        addResponseMetrics(formResponse)
+        metrics.addResponseMetrics(formResponse)
+        responseCacheRate.add(responseWasCached(formResponse))
     })
 }

@@ -4,7 +4,11 @@ We use these scripts to benchmark Object Cache Pro and Relay with various hostin
 
 ## Setup
 
-Make sure [k6 is installed](https://k6.io/docs/getting-started/installation/), or use [k6 Cloud](https://k6.io/cloud/).
+Make sure [k6 is installed](https://k6.io/docs/getting-started/installation/).
+
+All tests can be run locally using `k6 run` or in the cloud using `k6 cloud`. 
+
+When Object Cache Pro is installed, custom metrics for [WordPress, Redis and Relay](lib/metrics.js) are automatically collected. 
 
 ## Tests
 
@@ -13,8 +17,8 @@ Make sure [k6 is installed](https://k6.io/docs/getting-started/installation/), o
 Fetches all WordPress sitemaps and requests random URLs.
 
 ```
-k6 run wp.js
-k6 run wp.js --vus=100 --duration=10m
+k6 run wp.js --env SITE_URL=https://example.com
+k6 run wp.js --vus=100 --duration=10m --env SITE_URL=https://example.com
 ```
 
 ### `woo-checkout.js`
@@ -25,7 +29,7 @@ Loads the homepage, selects and loads a random category, selects a random produc
 wp option update woocommerce_enable_guest_checkout no --autoload=no
 wp option update woocommerce_enable_signup_and_login_from_checkout yes --autoload=no
 
-k6 run woo-checkout.js
+k6 run woo-checkout.js --env SITE_URL=https://example.com
 ```
 
 Be sure to [reset WooCommerce](#reset-woocommerce) between test runs.
@@ -35,7 +39,7 @@ Be sure to [reset WooCommerce](#reset-woocommerce) between test runs.
 Loads the homepage, signs in, views at orders and then their account details.
 
 ```
-k6 run woo-customer.js
+k6 run woo-customer.js --env SITE_URL=https://example.com
 ```
 
 This script requires [seeded users](#seeding-users).
@@ -44,10 +48,18 @@ This script requires [seeded users](#seeding-users).
 
 ### Site URL
 
-You can pass in the `SITE_URL` to point the traffic at your own site.
+You can pass in the `SITE_URL` to point the traffic at at specific URL.
 
 ```
-k6 run wp.js -e SITE_URL=http://localhost:8080
+k6 run wp.js --env SITE_URL=http://localhost:8080
+```
+
+### Project ID
+
+You can set the k6 Cloud "Project ID" using the `PROJECT_ID` environment variable.
+
+```
+k6 cloud wp.js --env PROJECT_ID=123456 --env SITE_URL=https://example.com
 ```
 
 ### Bypass page caches
@@ -55,7 +67,7 @@ k6 run wp.js -e SITE_URL=http://localhost:8080
 To attempt bypassing page caches without logging in, pass in `BYPASS_CACHE`:
 
 ```
-k6 run wp.js -e BYPASS_CACHE=1 
+k6 run wp.js --env BYPASS_CACHE=1
 ```
 
 ## Reset WooCommerce
