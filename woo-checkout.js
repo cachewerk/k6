@@ -4,7 +4,7 @@ import { Rate, Trend } from 'k6/metrics'
 
 import faker from 'https://cdn.jsdelivr.net/npm/faker@5.5.3/dist/faker.min.js'
 
-import { rand, sample, wpMetrics, bypassPageCacheCookies } from './lib/helpers.js'
+import { rand, sample, wpMetrics, responseWasCached, bypassPageCacheCookies } from './lib/helpers.js'
 import { isOK, itemAddedToCart, cartHasProduct, orderWasPlaced } from './lib/checks.js'
 
 export const options = {
@@ -29,6 +29,7 @@ export const options = {
 }
 
 const errorRate = new Rate('errors')
+const responseCacheRate = new Rate('response_cached')
 
 // metrics provided by Object Cache Pro
 const cacheHits = new Trend('cache_hits')
@@ -49,6 +50,8 @@ export default function () {
     }
 
     const addResponseMetrics = (response) => {
+        responseCacheRate.add(responseWasCached(response))
+
         if (metrics = wpMetrics(response)) {
             cacheHits.add(metrics.hits)
             storeReads.add(metrics.storeReads)

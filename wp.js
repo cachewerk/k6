@@ -1,7 +1,7 @@
 import http from 'k6/http'
 import { Rate, Trend } from 'k6/metrics'
 
-import { sample, wpMetrics, wpSitemap, bypassPageCacheCookies } from './lib/helpers.js'
+import { sample, wpMetrics, wpSitemap, responseWasCached, bypassPageCacheCookies } from './lib/helpers.js'
 
 export const options = {
     vus: 20,
@@ -9,6 +9,7 @@ export const options = {
 }
 
 const errorRate = new Rate('errors')
+const responseCacheRate = new Rate('response_cached')
 
 // metrics provided by Object Cache Pro
 const cacheHits = new Trend('cache_hits')
@@ -31,6 +32,7 @@ export default function (data) {
     const response = http.get(url, { cookies })
 
     errorRate.add(response.status >= 400)
+    responseCacheRate.add(responseWasCached(response))
 
     const metrics = wpMetrics(response)
 
