@@ -1,7 +1,7 @@
 import http from 'k6/http'
 import { Rate, Trend } from 'k6/metrics'
 
-import { sample, parseMetricsFromResponse, wpSitemap, responseWasCached, bypassPageCacheCookies } from './lib/helpers.js'
+import { sample, validateSiteUrl, wpSitemap, responseWasCached, bypassPageCacheCookies, parseMetricsFromResponse } from './lib/helpers.js'
 
 export const options = {
     vus: 20,
@@ -19,10 +19,10 @@ const msCache = new Trend('ms_cache', true)
 const msCacheRatio = new Trend('ms_cache_ratio')
 
 export function setup () {
-    const siteUrl = __ENV.SITE_URL || 'https://test.cachewerk.com'
-    const sitemap = wpSitemap(`${siteUrl}/wp-sitemap.xml`)
+    const siteUrl = __ENV.SITE_URL
+    validateSiteUrl(siteUrl);
 
-    return { urls: sitemap.urls }
+    return { urls: wpSitemap(`${siteUrl}/wp-sitemap.xml`).urls }
 }
 
 export default function (data) {

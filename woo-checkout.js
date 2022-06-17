@@ -1,11 +1,11 @@
 import http from 'k6/http'
-import { check, group, fail, sleep } from 'k6'
 import { Rate, Trend } from 'k6/metrics'
+import { check, group, fail, sleep } from 'k6'
 
 import faker from 'https://cdn.jsdelivr.net/npm/faker@5.5.3/dist/faker.min.js'
 
-import { rand, sample, parseMetricsFromResponse, responseWasCached, bypassPageCacheCookies } from './lib/helpers.js'
 import { isOK, itemAddedToCart, cartHasProduct, orderWasPlaced } from './lib/checks.js'
+import { rand, sample, validateSiteUrl, responseWasCached, bypassPageCacheCookies, parseMetricsFromResponse } from './lib/helpers.js'
 
 export const options = {
     throw: true,
@@ -40,7 +40,9 @@ const msCacheRatio = new Trend('ms_cache_ratio')
 
 export default function () {
     const jar = new http.CookieJar()
-    const siteUrl = __ENV.SITE_URL || 'https://test.cachewerk.com'
+    const siteUrl = __ENV.SITE_URL
+
+    validateSiteUrl(siteUrl);
 
     const pause = {
         min: 3,

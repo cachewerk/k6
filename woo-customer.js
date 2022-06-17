@@ -1,9 +1,9 @@
 import http from 'k6/http'
-import { check, group, fail, sleep } from 'k6'
 import { Rate, Trend } from 'k6/metrics'
+import { check, group, fail, sleep } from 'k6'
 
-import { rand, parseMetricsFromResponse, responseWasCached, bypassPageCacheCookies } from './lib/helpers.js'
 import { isOK, pageIsNotLogin } from './lib/checks.js'
+import { rand, validateSiteUrl, responseWasCached, bypassPageCacheCookies, parseMetricsFromResponse } from './lib/helpers.js'
 
 export const options = {
     throw: true,
@@ -37,10 +37,10 @@ const msCache = new Trend('ms_cache', true)
 const msCacheRatio = new Trend('ms_cache_ratio')
 
 export default function () {
-    let metrics
-
     const jar = new http.CookieJar()
-    const siteUrl = __ENV.SITE_URL || 'https://test.cachewerk.com'
+    const siteUrl = __ENV.SITE_URL
+
+    validateSiteUrl(siteUrl);
 
     const pause = {
         min: 3,
