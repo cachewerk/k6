@@ -48,6 +48,13 @@ Using `k6 run` will execute tests locally. To run _k6 Cloud_ tests from the CLI,
 k6 cloud wp.js --env BYPASS_CACHE=1 --env PROJECT_ID=123456 --env SITE_URL=https://example.com
 ```
 
+## Custom metrics
+
+- TODO: what is this, how to get it working, and explain all metrics...
+- TODO: add Redis/Relay metrics...
+- TODO: how to set default comparison of custom metrics?
+- TODO: ensure metrics (like Redis ops/sec) is optional
+
 ## Environment variables
 
 ### Site URL
