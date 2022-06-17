@@ -26,6 +26,13 @@ export const options = {
         //     gracefulStop: '10s',
         // },
     },
+    ext: {
+        loadimpact: {
+            name: 'WooCommerce checkout flow',
+            note: 'Loads the homepage, selects and loads a random category, selects a random product and adds it to the cart, loads the cart page and then places an order.',
+            projectID: __ENV.PROJECT_ID || null
+        },
+    },
 }
 
 const errorRate = new Rate('errors')

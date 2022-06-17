@@ -24,6 +24,13 @@ export const options = {
         //     gracefulStop: '10s',
         // },
     },
+    ext: {
+        loadimpact: {
+            name: 'WooCommerce account flow',
+            note: 'Loads the homepage, signs in, views at orders and then their account details.',
+            projectID: __ENV.PROJECT_ID || null
+        },
+    },
 }
 
 const errorRate = new Rate('errors')

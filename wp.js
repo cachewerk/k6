@@ -6,6 +6,13 @@ import { sample, validateSiteUrl, wpSitemap, responseWasCached, bypassPageCacheC
 export const options = {
     vus: 20,
     duration: '20s',
+    ext: {
+        loadimpact: {
+            name: 'Random WordPress requests',
+            note: 'Fetch all WordPress sitemaps and request random URLs.',
+            projectID: __ENV.PROJECT_ID || null
+        },
+    },
 }
 
 const errorRate = new Rate('errors')
