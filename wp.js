@@ -1,7 +1,7 @@
 import http from 'k6/http'
 import { Rate, Trend } from 'k6/metrics'
 
-import { sample, wpMetrics, wpSitemap, responseWasCached, bypassPageCacheCookies } from './lib/helpers.js'
+import { sample, parseMetricsFromResponse, wpSitemap, responseWasCached, bypassPageCacheCookies } from './lib/helpers.js'
 
 export const options = {
     vus: 20,
@@ -34,7 +34,7 @@ export default function (data) {
     errorRate.add(response.status >= 400)
     responseCacheRate.add(responseWasCached(response))
 
-    const metrics = wpMetrics(response)
+    const metrics = parseMetricsFromResponse(response)
 
     if (metrics) {
         cacheHits.add(metrics.hits)

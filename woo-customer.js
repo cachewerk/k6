@@ -2,7 +2,7 @@ import http from 'k6/http'
 import { check, group, fail, sleep } from 'k6'
 import { Rate, Trend } from 'k6/metrics'
 
-import { rand, wpMetrics, responseWasCached, bypassPageCacheCookies } from './lib/helpers.js'
+import { rand, parseMetricsFromResponse, responseWasCached, bypassPageCacheCookies } from './lib/helpers.js'
 import { isOK, pageIsNotLogin } from './lib/checks.js'
 
 export const options = {
@@ -50,7 +50,9 @@ export default function () {
     const addResponseMetrics = (response) => {
         responseCacheRate.add(responseWasCached(response))
 
-        if (metrics = wpMetrics(response)) {
+        const metrics = parseMetricsFromResponse(response)
+
+        if (metrics) {
             cacheHits.add(metrics.hits)
             storeReads.add(metrics.storeReads)
             storeWrites.add(metrics.storeWrites)
