@@ -2,10 +2,11 @@ import http from 'k6/http'
 import { Rate, Trend } from 'k6/metrics'
 import { check, group, fail, sleep } from 'k6'
 
-import faker from 'https://cdn.jsdelivr.net/npm/faker@5.5.3/dist/faker.min.js'
-
+import Metrics from './lib/metrics.js';
 import { isOK, itemAddedToCart, cartHasProduct, orderWasPlaced } from './lib/checks.js'
-import { rand, sample, validateSiteUrl, responseWasCached, bypassPageCacheCookies, parseMetricsFromResponse } from './lib/helpers.js'
+import { rand, sample, validateSiteUrl, responseWasCached, bypassPageCacheCookies } from './lib/helpers.js'
+
+import faker from 'https://cdn.jsdelivr.net/npm/faker@5.5.3/dist/faker.min.js'
 
 export const options = {
     throw: true,
@@ -39,15 +40,7 @@ const errorRate = new Rate('errors')
 const responseCacheRate = new Rate('response_cached')
 
 // These metrics are provided by Object Cache Pro when `analytics.footnote` is enabled
-const cacheHits = new Trend('cache_hits')
-const cacheHitRatio = new Trend('cache_hit_ratio')
-const storeReads = new Trend('store_reads')
-const storeWrites = new Trend('store_writes')
-const msCache = new Trend('ms_cache', true)
-const msCacheMedian = new Trend('ms_cache_median', true)
-const msCacheRatio = new Trend('ms_cache_ratio')
-const relayRate = new Rate('using_relay')
-const phpRedisRate = new Rate('using_phpredis')
+const metrics = new Metrics();
 
 export default function () {
     const jar = new http.CookieJar()
@@ -58,24 +51,6 @@ export default function () {
     const pause = {
         min: 3,
         max: 8,
-    }
-
-    const addResponseMetrics = (response) => {
-        responseCacheRate.add(responseWasCached(response))
-
-        const metrics = parseMetricsFromResponse(response)
-
-        if (metrics) {
-            cacheHits.add(metrics.hits)
-            cacheHitRatio.add(metrics.hitRatio)
-            storeReads.add(metrics.storeReads)
-            storeWrites.add(metrics.storeWrites)
-            msCache.add(metrics.msCache)
-            msCacheMedian.add(metrics.msCacheMedian)
-            msCacheRatio.add(metrics.msCacheRatio)
-            relayRate.add(metrics.usingRelay)
-            phpRedisRate.add(metrics.usingPhpRedis)
-        }
     }
 
     if (__ENV.BYPASS_CACHE) {
@@ -90,7 +65,8 @@ export default function () {
         check(response, isOK)
             || (errorRate.add(1) && fail('status code was *not* 200'))
 
-        addResponseMetrics(response)
+        metrics.addResponseMetrics(response)
+        responseCacheRate.add(responseWasCached(response))
 
         return response.html()
             .find('li.product-category > a')
@@ -107,7 +83,8 @@ export default function () {
         check(response, isOK)
             || (errorRate.add(1) && fail('status code was *not* 200'))
 
-        addResponseMetrics(response)
+        metrics.addResponseMetrics(response)
+        responseCacheRate.add(responseWasCached(response))
 
         return response.html()
             .find('.products')
@@ -125,7 +102,8 @@ export default function () {
         check(response, isOK)
             || (errorRate.add(1) && fail('status code was *not* 200'))
 
-        addResponseMetrics(response)
+        metrics.addResponseMetrics(response)
+        responseCacheRate.add(responseWasCached(response))
 
         const fields = response.html()
             .find('.input-text.qty')
@@ -148,7 +126,8 @@ export default function () {
         check(formResponse, itemAddedToCart)
             || fail('items *not* added to cart')
 
-        addResponseMetrics(formResponse)
+        metrics.addResponseMetrics(formResponse)
+        responseCacheRate.add(responseWasCached(formResponse))
     })
 
     sleep(rand(pause.min, pause.max))
@@ -162,7 +141,8 @@ export default function () {
         check(response, cartHasProduct)
             || fail('cart was empty')
 
-        addResponseMetrics(response)
+        metrics.addResponseMetrics(response)
+        responseCacheRate.add(responseWasCached(response))
     })
 
     sleep(rand(pause.min, pause.max))
@@ -173,7 +153,8 @@ export default function () {
         check(response, isOK)
             || (errorRate.add(1) && fail('status code was *not* 200'))
 
-        addResponseMetrics(response)
+        metrics.addResponseMetrics(response)
+        responseCacheRate.add(responseWasCached(response))
 
         const fields = {
             billing_first_name: faker.name.firstName(),
@@ -199,6 +180,7 @@ export default function () {
         check(formResponse, orderWasPlaced)
             || fail('order was *not* placed')
 
-        addResponseMetrics(formResponse)
+        metrics.addResponseMetrics(formResponse)
+        responseCacheRate.add(responseWasCached(formResponse))
     })
 }

@@ -4,7 +4,11 @@ We use these scripts to benchmark Object Cache Pro and Relay with various hostin
 
 ## Setup
 
-Make sure [k6 is installed](https://k6.io/docs/getting-started/installation/), or use [k6 Cloud](https://k6.io/cloud/).
+Make sure [k6 is installed](https://k6.io/docs/getting-started/installation/).
+
+All tests can be run locally using `k6 run` or in the cloud using `k6 cloud`. 
+
+When Object Cache Pro is installed, custom metrics for [WordPress, Redis and Relay](lib/metrics.js) are automatically collected. 
 
 ## Tests
 
@@ -40,21 +44,6 @@ k6 run woo-customer.js --env SITE_URL=https://example.com
 
 This script requires [seeded users](#seeding-users).
 
-## Cloud tests
-
-Using `k6 run` will execute tests locally. To run _k6 Cloud_ tests from the CLI, use `k6 cloud` instead. You can even set the "Project ID" using the `PROJECT_ID` environment variable.
-
-```
-k6 cloud wp.js --env BYPASS_CACHE=1 --env PROJECT_ID=123456 --env SITE_URL=https://example.com
-```
-
-## Custom metrics
-
-- TODO: what is this, how to get it working, and explain all metrics...
-- TODO: add Redis/Relay metrics...
-- TODO: how to set default comparison of custom metrics?
-- TODO: ensure metrics (like Redis ops/sec) is optional
-
 ## Environment variables
 
 ### Site URL
@@ -63,6 +52,14 @@ You can pass in the `SITE_URL` to point the traffic at at specific URL.
 
 ```
 k6 run wp.js --env SITE_URL=http://localhost:8080
+```
+
+### Project ID
+
+You can set the k6 Cloud "Project ID" using the `PROJECT_ID` environment variable.
+
+```
+k6 cloud wp.js --env PROJECT_ID=123456 --env SITE_URL=https://example.com
 ```
 
 ### Bypass page caches
