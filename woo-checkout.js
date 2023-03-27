@@ -10,6 +10,7 @@ import faker from 'https://cdn.jsdelivr.net/npm/faker@5.5.3/dist/faker.min.js'
 
 export const options = {
     throw: true,
+    summaryTimeUnit: 'ms',
     scenarios: {
         ramping: {
             executor: 'ramping-vus',

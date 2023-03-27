@@ -8,6 +8,7 @@ import { rand, validateSiteUrl, responseWasCached, bypassPageCacheCookies } from
 
 export const options = {
     throw: true,
+    summaryTimeUnit: 'ms',
     scenarios: {
         ramping: {
             executor: 'ramping-vus',
