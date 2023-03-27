@@ -7,6 +7,7 @@ import { sample, validateSiteUrl, wpSitemap, responseWasCached, bypassPageCacheC
 export const options = {
     vus: 20,
     duration: '20s',
+    summaryTimeUnit: 'ms',
     ext: {
         loadimpact: {
             name: 'Random WordPress requests',
