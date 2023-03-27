@@ -88,7 +88,7 @@ export default function () {
 
         return response.html()
             .find('.products')
-            .find('.product:not(.product-type-variable)') // skip variable products
+            .find('.product:not(.product-type-variable,.outofstock)') // skip products
             .find('.woocommerce-loop-product__link')
             .map((idx, el) => el.attr('href'))
     })
@@ -147,7 +147,7 @@ export default function () {
 
     sleep(rand(pause.min, pause.max))
 
-    group('Place holder', function () {
+    group('Place order', function () {
         const response = http.get(`${siteUrl}/checkout`, { jar })
 
         check(response, isOK)
