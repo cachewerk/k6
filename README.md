@@ -51,7 +51,7 @@ This script requires [seeded users](#seeding-users).
 You can pass in the `SITE_URL` to point the traffic at at specific URL.
 
 ```
-k6 run wp.js --env SITE_URL=http://localhost:8080
+k6 run wp.js --env SITE_URL=https://example.com
 ```
 
 ### Project ID
