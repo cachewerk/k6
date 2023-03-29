@@ -1,8 +1,8 @@
-# Configuration examples
+<?php
 
-## Object Cache Pro
-
-```php
+/**
+ * Object Cache Pro configuration example.
+ */
 define('WP_REDIS_CONFIG', [
     'token' => '...',
     'host' => '127.0.0.1',
@@ -18,11 +18,10 @@ define('WP_REDIS_CONFIG', [
     'debug' => false,
     'save_commands' => false,
 ]);
-```
 
-## Object Cache Pro + Relay
-
-```php
+/**
+ * Relay + Object Cache Pro configuration example.
+ */
 define('WP_REDIS_CONFIG', [
     'token' => '...',
     'host' => '127.0.0.1',
@@ -40,4 +39,3 @@ define('WP_REDIS_CONFIG', [
     'debug' => false,
     'save_commands' => false,
 ]);
-```
