@@ -2,12 +2,14 @@
 
 set -e
 
-# Running tests:
-#  k6 run wp.js --summary-export example_com-ocp+relay.json --env BYPASS_CACHE=1 --env SITE_URL=https://example.com
+if [[ -z "$1" ]]; then
+    echo "Usage: $0 /path/to/results > export.csv"
+    exit 1
+fi
 
-WORKDIR="${1:-.}"
+workdir="${1:-.}"
 
-CALCULATIONS=(
+calculations=(
     "avg"
     # "p(90)"
     "p(95)"
@@ -16,8 +18,8 @@ CALCULATIONS=(
     # "med"
 )
 
-# https://k6.io/docs/using-k6/metrics/
-METRICS=(
+# See https://k6.io/docs/using-k6/metrics/
+metrics=(
     "response_cached"
     "errors"
     # "vus"
@@ -43,13 +45,11 @@ METRICS=(
     # "redis_hits"
     # "redis_keys"
     # "redis_memory_fragmentation_ratio"
-
     "relay_ops_per_sec"
     "relay_hit_ratio"
     # "relay_keys"
     # "relay_memory_active"
     "relay_memory_ratio"
-
     "wp_hits"
     "wp_hit_ratio"
     "wp_ms_total"
@@ -62,83 +62,62 @@ METRICS=(
     "wp_store_writes"
 )
 
-BENCHMARKS=$(find $WORKDIR -name "*.json" -print)
-BENCHMARKS_ARRAY=($BENCHMARKS)
+benchmarks=$(find "$workdir" -name "*.json" -print)
+benchmarks_array=($benchmarks)
 
->&2 echo "Reading ${#BENCHMARKS_ARRAY[@]} benchmarks..."
+>&2 echo "Reading ${#benchmarks_array[@]} benchmarks..."
 
-HEADER=""
-
-HEADER+='"Metric",'
-for file in $BENCHMARKS; do
-  NAME=$(basename $file .json)
-  HEADER+="\"$NAME\","
+header='"Metric",'
+for file in $benchmarks; do
+    name=$(basename "$file" .json)
+    header+="\"$name\","
 done
+echo "$header"
 
-echo "$HEADER"
+for metric in "${metrics[@]}"; do
+    counter=$(jq ".metrics.\"$metric\".rate" "$file")
+    rate=$(jq ".metrics.\"$metric\".fails" "$file")
+    gauge=$(jq ".metrics.\"$metric\".value" "$file")
 
-for metric in "${METRICS[@]}"; do
-  COUNTER=$(jq ".metrics.\"$metric\".rate" $file)
-  RATE=$(jq ".metrics.\"$metric\".fails" $file)
-  GAUGE=$(jq ".metrics.\"$metric\".value" $file)
+    if [[ "$counter" != "null" ]]; then
+        row="\"$metric.count\","
+        for file in $benchmarks; do
+            value=$(jq ".metrics.\"$metric\".count" "$file")
+            row+="\"$value\","
+        done
+        echo "$row"
 
-  if [[ "$COUNTER" != "null" ]]; then
-
-    ROW="\"$metric.count\","
-
-    for file in $BENCHMARKS; do
-      VALUE=$(jq ".metrics.\"$metric\".count" $file)
-      ROW+="\"$VALUE\","
-    done
-
-    echo "$ROW"
-
-    ROW="\"$metric.rate/sec\","
-
-    for file in $BENCHMARKS; do
-      VALUE=$(jq ".metrics.\"$metric\".rate" $file)
-      ROW+=$(printf "\"%.2f\"," $VALUE)
-    done
-
-    echo "$ROW"
-
-  elif [[ "$RATE" != "null" ]]; then
-
-    ROW="\"$metric\","
-
-    for file in $BENCHMARKS; do
-      VALUE=$(jq ".metrics.\"$metric\".value" $file)
-      VALUE=$((VALUE * 100))
-      ROW+="\"$VALUE%\","
-    done
-
-    echo "$ROW"
-
-  elif [[ "$GAUGE" != "null" ]]; then
-
-    ROW="\"$metric\","
-
-    for file in $BENCHMARKS; do
-      VALUE=$(jq ".metrics.\"$metric\".value" $file)
-      ROW+="\"$VALUE\","
-    done
-
-    echo "$ROW"
-
-  else
-
-    for calculation in "${CALCULATIONS[@]}"; do
-      ROW="\"$metric.$calculation\","
-
-      for file in $BENCHMARKS; do
-        VALUE=$(jq ".metrics.\"$metric\".\"$calculation\" | select(. != null)" $file)
-        ROW+="\"$VALUE\","
-      done
-
-      echo "$ROW"
-    done
-
-  fi
+        row="\"$metric.rate/sec\","
+        for file in $benchmarks; do
+            value=$(jq ".metrics.\"$metric\".rate" "$file")
+            row+=$(printf "\"%.2f\"," "$value")
+        done
+        echo "$row"
+    elif [[ "$rate" != "null" ]]; then
+        row="\"$metric\","
+        for file in $benchmarks; do
+            value=$(jq ".metrics.\"$metric\".value" "$file")
+            value=$((value * 100))
+            row+="\"$value%\","
+        done
+        echo "$row"
+    elif [[ "$gauge" != "null" ]]; then
+        row="\"$metric\","
+        for file in $benchmarks; do
+            value=$(jq ".metrics.\"$metric\".value" "$file")
+            row+="\"$value\","
+        done
+        echo "$row"
+    else
+        for calculation in "${calculations[@]}"; do
+            row="\"$metric.$calculation\","
+            for file in $benchmarks; do
+                value=$(jq ".metrics.\"$metric\".\"$calculation\" | select(. != null)" "$file")
+                row+="\"$value\","
+            done
+            echo "$row"
+        done
+    fi
 done
 
 >&2 echo "Done"

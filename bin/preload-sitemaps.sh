@@ -2,20 +2,31 @@
 
 set -e
 
-SITEMAP_URL=$1
+# Check if a sitemap URL is provided
+if [[ -z "$1" ]]; then
+    echo "Usage: $0 <https://example.com/wp-sitemap.xml>"
+    exit 1
+fi
 
-echo "Pulling $SITEMAP_URL"
+sitemap_url="$1"
 
-sitemaps=$(curl -L "$SITEMAP_URL" | awk -F '[<>]' '/loc/{print $3}')
-count=$(echo "$sitemaps" | grep -c '')
-i=1
+echo "Pulling $sitemap_url"
+
+# Fetch the sitemaps from the provided root sitemap URL
+sitemaps=$(curl -sL "$sitemap_url" | awk -F '[<>]' '/loc/{print $3}')
+
+# Count the number of sitemaps found.
+count=$(echo "$sitemaps" | wc -l | tr -d ' ')
 
 echo "Found $count sitemaps"
 
-for sitemap in $sitemaps; do
-  echo "Preloading $i/$count $sitemap"
-  curl -s "$sitemap" > /dev/null
-  i=$((i + 1))
-done
+index=1
+
+# Iterate through the sitemaps and preload them.
+while read -r sitemap; do
+    echo "Preloading $index/$count $sitemap"
+    curl -s "$sitemap" > /dev/null
+    index=$((index + 1))
+done <<< "$sitemaps"
 
 echo "Sitemaps preloaded."
