@@ -20,8 +20,8 @@ CALCULATIONS=(
 METRICS=(
     "response_cached"
     "errors"
-    "vus"
-    # "vus_max"
+    # "vus"
+    "vus_max"
     # "iteration_duration"
     "iterations"
     # "http_req_blocked"
