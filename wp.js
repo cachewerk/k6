@@ -1,8 +1,8 @@
 import http from 'k6/http'
 import { Rate, Trend } from 'k6/metrics'
 
-import Metrics from './lib/metrics.js';
-import { sample, validateSiteUrl, wpSitemap, responseWasCached, bypassPageCacheCookies } from './lib/helpers.js'
+import Metrics from './lib/metrics.js'
+import { sample, validateSiteUrl, validateSitemapUrl, wpSitemap, responseWasCached, bypassPageCacheCookies } from './lib/helpers.js'
 
 export const options = {
     vus: 20,
@@ -21,13 +21,16 @@ const errorRate = new Rate('errors')
 const responseCacheRate = new Rate('response_cached')
 
 // These metrics are provided by Object Cache Pro when `analytics.footnote` is enabled
-const metrics = new Metrics();
+const metrics = new Metrics()
 
 export function setup () {
     const siteUrl = __ENV.SITE_URL
-    validateSiteUrl(siteUrl);
+    validateSiteUrl(siteUrl)
 
-    return { urls: wpSitemap(`${siteUrl}/wp-sitemap.xml`).urls }
+    const sitemapUrl = __ENV.SITEMAP_URL || `${siteUrl}/wp-sitemap.xml`
+    validateSitemapUrl(sitemapUrl)
+
+    return { urls: wpSitemap(sitemapUrl).urls }
 }
 
 export default function (data) {
