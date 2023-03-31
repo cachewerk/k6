@@ -97,8 +97,8 @@ for metric in "${metrics[@]}"; do
         row="\"$metric\","
         for file in $benchmarks; do
             value=$(jq ".metrics.\"$metric\".value" "$file")
-            value=$((value * 100))
-            row+="\"$value%\","
+            percent=$(echo "scale=2; $value * 100" | bc)
+            row+="\"$percent%\","
         done
         echo "$row"
     elif [[ "$gauge" != "null" ]]; then
