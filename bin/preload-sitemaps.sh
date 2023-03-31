@@ -10,10 +10,16 @@ fi
 
 sitemap_url="$1"
 
+# Check if a sitemap URL ends with .xml
+if ! [[ $sitemap_url =~ .xml$ ]]; then
+    echo "Usage: $0 <https://example.com/wp-sitemap.xml>"
+    exit 1
+fi
+
 echo "Pulling $sitemap_url"
 
 # Fetch the sitemaps from the provided root sitemap URL
-sitemaps=$(curl -sL "$sitemap_url" | awk -F '[<>]' '/loc/{print $3}')
+sitemaps=$(curl -SsL "$sitemap_url" | awk -F '[<>]' '/loc/{print $3}')
 
 # Count the number of sitemaps found.
 count=$(echo "$sitemaps" | wc -l | tr -d ' ')
