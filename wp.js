@@ -1,5 +1,5 @@
 import http from 'k6/http'
-import { Rate, Trend } from 'k6/metrics'
+import { Rate } from 'k6/metrics'
 
 import Metrics from './lib/metrics.js'
 import { sample, validateSiteUrl, validateSitemapUrl, wpSitemap, responseWasCached, bypassPageCacheCookies } from './lib/helpers.js'
@@ -30,7 +30,18 @@ export function setup () {
     const sitemapUrl = __ENV.SITEMAP_URL || `${siteUrl}/wp-sitemap.xml`
     validateSitemapUrl(sitemapUrl)
 
-    return { urls: wpSitemap(sitemapUrl).urls }
+    return {
+        startedAt: Date.now(),
+        urls: wpSitemap(sitemapUrl).urls,
+    }
+}
+
+export function teardown (data) {
+    const startedAt = new Date(data.startedAt)
+    const endedAt = new Date()
+
+    console.info(`Run started at ${startedAt.toJSON()}`)
+    console.info(`Run ended at   ${endedAt.toJSON()}`)
 }
 
 export default function (data) {

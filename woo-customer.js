@@ -41,6 +41,20 @@ const responseCacheRate = new Rate('response_cached')
 // These metrics are provided by Object Cache Pro when `analytics.footnote` is enabled
 const metrics = new Metrics();
 
+export function setup () {
+    return {
+        startedAt: Date.now(),
+    }
+}
+
+export function teardown (data) {
+    const startedAt = new Date(data.startedAt)
+    const endedAt = new Date()
+
+    console.info(`Run started at ${startedAt.toJSON()}`)
+    console.info(`Run ended at   ${endedAt.toJSON()}`)
+}
+
 export default function () {
     const jar = new http.CookieJar()
     const siteUrl = __ENV.SITE_URL
