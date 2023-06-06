@@ -134,14 +134,18 @@ class k6ObjectCacheMetrics
 
     protected static function buildMetrics(int $hits, int $misses, float $ratio, $bytes): string
     {
+        global $timestart;
+
+        $requestStart = $_SERVER['REQUEST_TIME_FLOAT'] ?? $timestart;
+
         return sprintf(
-            'metric#hits=%d metric#misses=%d metric#hit-ratio=%s metric#bytes=%d metric#sql-queries=%d',
+            'metric#hits=%d metric#misses=%d metric#hit-ratio=%s metric#bytes=%d metric#sql-queries=%d metric#ms-total=%s',
             $hits,
             $misses,
             $ratio,
             $bytes,
-            function_exists('\get_num_queries') ? get_num_queries() : null
-            // TODO: Additional WP metrics
+            function_exists('\get_num_queries') ? \get_num_queries() : null,
+            $requestStart ? round((microtime(true) - $requestStart) * 1000, 2) : null
         );
     }
 
