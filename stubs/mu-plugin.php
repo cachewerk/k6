@@ -113,23 +113,26 @@ class k6ObjectCacheMetrics
             case self::WpRedis:
                 return self::buildMetrics(
                     $wp_object_cache->cache_hits,
-                    $wp_object_cache->misses,
-                    99, // TODO: Calculate WP Redis ratio
-                    9999 // TODO: Calculate WP Redis bytes
+                    $wp_object_cache->cache_misses,
+                    self::calculateHitRatio($wp_object_cache->cache_hits, $wp_object_cache->cache_misses),
+                    self::calculateBytes($wp_object_cache->cache)
                 );
             case self::LiteSpeedCache:
+                $hits = $wp_object_cache->count_hit_incall + $wp_object_cache->count_hit;
+                $misses = $wp_object_cache->count_miss_incall + $wp_object_cache->count_miss;
+
                 return self::buildMetrics(
-                    $wp_object_cache->count_hit,
-                    $wp_object_cache->count_miss,
-                    99, // TODO: Calculate LiteSpeed Cache ratio
-                    9999 // TODO: Calculate LiteSpeed Cache bytes
+                    $hits,
+                    $misses,
+                    self::calculateHitRatio($hits, $misses),
+                    self::calculateBytes($wp_object_cache->_cache)
                 );
         }
 
         return '';
     }
 
-    protected static function buildMetrics($hits, $misses, $ratio, $bytes): string
+    protected static function buildMetrics(int $hits, int $misses, float $ratio, $bytes): string
     {
         return sprintf(
             'metric#hits=%d metric#misses=%d metric#hit-ratio=%s metric#bytes=%d metric#sql-queries=%d',
@@ -140,5 +143,21 @@ class k6ObjectCacheMetrics
             function_exists('\get_num_queries') ? get_num_queries() : null
             // TODO: Additional WP metrics
         );
+    }
+
+    protected static function calculateHitRatio(int $hits, int $misses): float
+    {
+        $total = $hits + $misses;
+
+        return $total > 0 ? round($hits / ($total / 100), 1) : 100;
+    }
+
+    protected static function calculateBytes(array $cache)
+    {
+        $bytes = array_map(function ($keys) {
+            return strlen(serialize($keys));
+        }, $cache);
+
+        return array_sum($bytes);
     }
 }
