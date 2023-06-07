@@ -12,7 +12,14 @@
 defined('ABSPATH') || exit;
 
 add_action('muplugins_loaded', ['k6ObjectCacheMetrics', 'init']);
-add_action('shutdown', ['k6ObjectCacheMetrics', 'print'], PHP_INT_MAX);
+
+add_action('wp_footer', ['k6ObjectCacheMetrics', 'shouldPrint']);
+add_action('wp_body_open', ['k6ObjectCacheMetrics', 'shouldPrint']);
+add_action('login_head', ['k6ObjectCacheMetrics', 'shouldPrint']);
+add_action('in_admin_header', ['k6ObjectCacheMetrics', 'shouldPrint']);
+add_action('rss_tag_pre', ['k6ObjectCacheMetrics', 'shouldPrint']);
+
+add_action('shutdown', ['k6ObjectCacheMetrics', 'maybePrint'], PHP_INT_MAX);
 
 class k6ObjectCacheMetrics
 {
@@ -75,13 +82,34 @@ class k6ObjectCacheMetrics
         }
     }
 
-    public static function print(): void
+    public static function maybePrint(): void
     {
         if (! self::$cache) {
             return;
         }
 
         if (! self::shouldPrint()) {
+            return;
+        }
+
+        if (is_robots() || is_trackback()) {
+            return;
+        }
+
+        if (
+            (defined('\WP_CLI') && constant('\WP_CLI')) ||
+            (defined('\REST_REQUEST') && constant('\REST_REQUEST')) ||
+            (defined('\XMLRPC_REQUEST') && constant('\XMLRPC_REQUEST')) ||
+            (defined('\DOING_AJAX') && constant('\DOING_AJAX')) ||
+            (defined('\DOING_CRON') && constant('\DOING_CRON')) ||
+            (defined('\DOING_AUTOSAVE') && constant('\DOING_AUTOSAVE')) ||
+            (function_exists('wp_is_json_request') && wp_is_json_request()) ||
+            (function_exists('wp_is_jsonp_request') && wp_is_jsonp_request())
+        ) {
+            return;
+        }
+
+        if (self::incompatibleContentType()) {
             return;
         }
 
@@ -93,24 +121,15 @@ class k6ObjectCacheMetrics
         );
     }
 
-    protected static function shouldPrint(): bool
+    public static function shouldPrint()
     {
-        if (is_robots() || is_trackback()) {
-            return false;
+        static $shouldPrint;
+
+        if (doing_action('shutdown')) {
+            return $shouldPrint;
         }
 
-        if (self::incompatibleContentType()) {
-            return false;
-        }
-
-        return ! ((defined('\WP_CLI') && constant('\WP_CLI')) ||
-                  (defined('\REST_REQUEST') && constant('\REST_REQUEST')) ||
-                  (defined('\XMLRPC_REQUEST') && constant('\XMLRPC_REQUEST')) ||
-                  (defined('\DOING_AJAX') && constant('\DOING_AJAX')) ||
-                  (defined('\DOING_CRON') && constant('\DOING_CRON')) ||
-                  (defined('\DOING_AUTOSAVE') && constant('\DOING_AUTOSAVE')) ||
-                  (function_exists('wp_is_json_request') && wp_is_json_request()) ||
-                  (function_exists('wp_is_jsonp_request') && wp_is_jsonp_request()));
+        $shouldPrint = true;
     }
 
     protected static function incompatibleContentType(): bool
