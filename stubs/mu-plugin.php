@@ -84,6 +84,14 @@ class k6ObjectCacheMetrics
 
     protected static function shouldPrint(): bool
     {
+        if (is_robots() || is_trackback()) {
+            return false;
+        }
+
+        if (self::incompatibleContentType()) {
+            return false;
+        }
+
         return ! ((defined('\WP_CLI') && constant('\WP_CLI')) ||
                   (defined('\REST_REQUEST') && constant('\REST_REQUEST')) ||
                   (defined('\XMLRPC_REQUEST') && constant('\XMLRPC_REQUEST')) ||
@@ -92,6 +100,46 @@ class k6ObjectCacheMetrics
                   (defined('\DOING_AUTOSAVE') && constant('\DOING_AUTOSAVE')) ||
                   (function_exists('wp_is_json_request') && wp_is_json_request()) ||
                   (function_exists('wp_is_jsonp_request') && wp_is_jsonp_request()));
+    }
+
+    protected static function incompatibleContentType(): bool
+    {
+        $jsonContentType = static function ($headers) {
+            foreach ($headers as $header => $value) {
+                if (stripos((string)$header, 'content-type') === false) {
+                    continue;
+                }
+
+                if (stripos((string)$value, '/json') === false) {
+                    continue;
+                }
+
+                return true;
+            }
+
+            return false;
+        };
+
+        if (function_exists('headers_list')) {
+            $headers = [];
+
+            foreach (headers_list() as $header) {
+                [$name, $value] = explode(':', $header);
+                $headers[$name] = $value;
+            }
+
+            if ($jsonContentType($headers)) {
+                return true;
+            }
+        }
+
+        if (function_exists('apache_response_headers')) {
+            if ($headers = apache_response_headers()) {
+                return $jsonContentType($headers);
+            }
+        }
+
+        return false;
     }
 
     protected static function getMetrics(): string
