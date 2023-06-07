@@ -64,12 +64,12 @@ class k6ObjectCacheMetrics
             self::$client = $client;
         }
 
-        if (method_exists($class, '_connect_redis')) {
+        if (method_exists($class, '_connect_redis') && method_exists($class, '_call_redis')) {
             self::$cache = self::WpRedis;
             self::$client = 'phpredis';
         }
 
-        if (property_exists($class, '_object_cache')) {
+        if ($wp_object_cache->_object_cache instanceof \LiteSpeed\Object_Cache) {
             self::$cache = self::LiteSpeedCache;
             self::$client = 'phpredis';
         }
