@@ -46,11 +46,22 @@ class k6ObjectCacheMetrics
             self::$client = strtolower($wp_object_cache->clientName());
         }
 
-        if (method_exists($class, 'connect_using_relay')) {
+        if (method_exists($class, 'connect_using_relay') && method_exists($class, 'redis_instance')) {
             self::$cache = self::RedisObjectCache;
 
-            $client = class_exists('Redis') ? 'phpredis' : 'predis';
-            self::$client = defined('WP_REDIS_CLIENT') ? str_replace('pecl', 'phpredis', WP_REDIS_CLIENT) : $client;
+            $instance = $wp_object_cache->redis_instance();
+
+            $client = 'predis';
+
+            if ($instance instanceof \Redis) {
+                $client = 'phpredis';
+            }
+
+            if ($instance instanceof \Relay\Relay) {
+                $client = 'relay';
+            }
+
+            self::$client = $client;
         }
 
         if (method_exists($class, '_connect_redis')) {
