@@ -155,40 +155,66 @@ class k6ObjectCacheMetrics
 
     protected static function getMetrics(): string
     {
-        global $wp_object_cache;
-
         switch (self::$cache) {
             case self::ObjectCachePro:
-                return $wp_object_cache->requestMeasurement();
+                return self::getObjectCacheProMetrics();
             case self::RedisObjectCache:
-                $info = $wp_object_cache->info();
-
-                return self::buildMetrics(
-                    $info->hits,
-                    $info->misses,
-                    $info->ratio,
-                    $info->bytes
-                );
+                return self::getRedisObjectCacheMetrics();
             case self::WpRedis:
-                return self::buildMetrics(
-                    $wp_object_cache->cache_hits,
-                    $wp_object_cache->cache_misses,
-                    self::calculateHitRatio($wp_object_cache->cache_hits, $wp_object_cache->cache_misses),
-                    self::calculateBytes($wp_object_cache->cache)
-                );
+                return self::getWpRedisMetrics();
             case self::LiteSpeedCache:
-                $hits = $wp_object_cache->count_hit_incall + $wp_object_cache->count_hit;
-                $misses = $wp_object_cache->count_miss_incall + $wp_object_cache->count_miss;
-
-                return self::buildMetrics(
-                    $hits,
-                    $misses,
-                    self::calculateHitRatio($hits, $misses),
-                    self::calculateBytes($wp_object_cache->_cache)
-                );
+                return self::getLiteSpeedCacheMetrics();
+            default:
+                return '';
         }
+    }
 
-        return '';
+    protected static function getObjectCacheProMetrics(): string
+    {
+        global $wp_object_cache;
+
+        return $wp_object_cache->requestMeasurement();
+    }
+
+    protected static function getRedisObjectCacheMetrics(): string
+    {
+        global $wp_object_cache;
+
+        $info = $wp_object_cache->info();
+
+        return self::buildMetrics(
+            $info->hits,
+            $info->misses,
+            $info->ratio,
+            $info->bytes
+        );
+    }
+
+    protected static function getWpRedisMetrics(): string
+    {
+        global $wp_object_cache;
+
+        return self::buildMetrics(
+            $wp_object_cache->cache_hits,
+            $wp_object_cache->cache_misses,
+            self::calculateHitRatio($wp_object_cache->cache_hits, $wp_object_cache->cache_misses),
+            self::calculateBytes($wp_object_cache->cache)
+        );
+    }
+
+    protected static function getLiteSpeedCacheMetrics(): string
+    {
+        global $wp_object_cache;
+
+        $hits = $wp_object_cache->count_hit_incall + $wp_object_cache->count_hit;
+        $misses = $wp_object_cache->count_miss_incall + $wp_object_cache->count_miss;
+
+        return self::buildMetrics(
+            $hits,
+            $misses,
+            self::calculateHitRatio($hits, $misses),
+            self::calculateBytes($wp_object_cache->_cache)
+        );
     }
 
     protected static function buildMetrics(int $hits, int $misses, float $ratio, $bytes): string
