@@ -205,7 +205,11 @@ class k6ObjectCacheMetrics
             $info->hits,
             $info->misses,
             $info->ratio,
-            $info->bytes
+            $info->bytes,
+            self::mapRedisInfo(
+                $wp_object_cache->redis_instance()->info(),
+                $wp_object_cache->diagnostics['database'] ?? 0
+            )
         );
     }
 
@@ -217,7 +221,11 @@ class k6ObjectCacheMetrics
             $wp_object_cache->cache_hits,
             $wp_object_cache->cache_misses,
             self::calculateHitRatio($wp_object_cache->cache_hits, $wp_object_cache->cache_misses),
-            self::calculateBytes($wp_object_cache->cache)
+            self::calculateBytes($wp_object_cache->cache),
+            self::mapRedisInfo(
+                $wp_object_cache->redis->info(),
+                $wp_object_cache->redis->getDBNum() ?? 0
+            )
         );
     }
 
@@ -236,13 +244,13 @@ class k6ObjectCacheMetrics
         );
     }
 
-    protected static function buildMetrics(int $hits, int $misses, float $ratio, $bytes): string
+    protected static function buildMetrics(int $hits, int $misses, float $ratio, $bytes, array $sample = []): string
     {
         global $timestart;
 
         $requestStart = $_SERVER['REQUEST_TIME_FLOAT'] ?? $timestart;
 
-        return sprintf(
+        $metrics = sprintf(
             'metric#hits=%d metric#misses=%d metric#hit-ratio=%s metric#bytes=%d metric#sql-queries=%d metric#ms-total=%s',
             $hits,
             $misses,
@@ -251,6 +259,14 @@ class k6ObjectCacheMetrics
             function_exists('\get_num_queries') ? \get_num_queries() : null,
             $requestStart ? round((microtime(true) - $requestStart) * 1000, 2) : null
         );
+
+        if ($sample) {
+            $metrics .= ' ' . implode(' ', array_map(static function ($metric, $value) {
+                return "sample#{$metric}={$value}";
+            }, array_keys($sample), $sample));
+        }
+
+        return $metrics;
     }
 
     protected static function calculateHitRatio(int $hits, int $misses): float
@@ -267,5 +283,35 @@ class k6ObjectCacheMetrics
         }, $cache);
 
         return array_sum($bytes);
+    }
+
+    protected static function mapRedisInfo(array $info, int $database): array
+    {
+        $total = intval($info['keyspace_hits'] + $info['keyspace_misses']);
+
+        $dbKey = "db{$database}";
+
+        if (isset($info[$dbKey])) {
+            $keyspace = array_column(array_map(static function ($value) {
+                return explode('=', $value);
+            }, explode(',', $info[$dbKey])), 1, 0);
+
+            $keys = intval($keyspace['keys']);
+        }
+
+        return [
+            'redis-hits' => $info['keyspace_hits'],
+            'redis-misses' => $info['keyspace_misses'],
+            'redis-hit-ratio' => $total > 0 ? round($info['keyspace_hits'] / ($total / 100), 2) : 100,
+            'redis-ops-per-sec' => $info['instantaneous_ops_per_sec'],
+            'redis-evicted-keys' => $info['evicted_keys'],
+            'redis-used-memory' => $info['used_memory'],
+            'redis-used-memory-rss' => $info['used_memory_rss'],
+            'redis-memory-fragmentation-ratio' => $info['mem_fragmentation_ratio'] ?? 0,
+            'redis-connected-clients' => $info['connected_clients'],
+            'redis-tracking-clients' => $info['tracking_clients'] ?? 0,
+            'redis-rejected-connections' => $info['rejected_connections'],
+            'redis-keys' => $keys ?? 00,
+        ];
     }
 }
