@@ -201,6 +201,10 @@ class k6ObjectCacheMetrics
 
         $info = $wp_object_cache->info();
 
+        $stats = $wp_object_cache->redis_instance() instanceof \Relay\Relay
+            ? $wp_object_cache->redis_instance()->stats()
+            : [];
+
         return self::buildMetrics(
             $info->hits,
             $info->misses,
@@ -208,6 +212,10 @@ class k6ObjectCacheMetrics
             $info->bytes,
             self::mapRedisInfo(
                 $wp_object_cache->redis_instance()->info(),
+                $wp_object_cache->diagnostics['database'] ?? 0
+            ),
+            self::mapRelayStats(
+                $stats,
                 $wp_object_cache->diagnostics['database'] ?? 0
             )
         );
@@ -254,7 +262,7 @@ class k6ObjectCacheMetrics
         );
     }
 
-    protected static function buildMetrics(int $hits, int $misses, float $ratio, $bytes, array $sample = []): string
+    protected static function buildMetrics(int $hits, int $misses, float $ratio, $bytes, array $redisSample = [], array $relaySample = []): string
     {
         global $timestart;
 
@@ -270,10 +278,16 @@ class k6ObjectCacheMetrics
             $requestStart ? round((microtime(true) - $requestStart) * 1000, 2) : null
         );
 
-        if ($sample) {
+        if ($redisSample) {
             $metrics .= ' ' . implode(' ', array_map(static function ($metric, $value) {
                 return "sample#{$metric}={$value}";
-            }, array_keys($sample), $sample));
+            }, array_keys($redisSample), $redisSample));
+        }
+
+        if ($relaySample) {
+            $metrics .= ' ' . implode(' ', array_map(static function ($metric, $value) {
+                return "sample#{$metric}={$value}";
+            }, array_keys($relaySample), $relaySample));
         }
 
         return $metrics;
@@ -322,6 +336,22 @@ class k6ObjectCacheMetrics
             'redis-tracking-clients' => $info['tracking_clients'] ?? 0,
             'redis-rejected-connections' => $info['rejected_connections'],
             'redis-keys' => $keys ?? 00,
+        ];
+    }
+
+    protected static function mapRelayStats(array $stats, int $database): array
+    {
+        $total = intval($stats['stats']['hits'] + $stats['stats']['misses']);
+
+        return [
+            'relay-hits' => $stats['stats']['hits'],
+            'relay-misses' => $stats['stats']['misses'],
+            'relay-hit-ratio' => $total > 0 ? round($stats['stats']['hits'] / ($total / 100), 2) : 100,
+            'relay-ops-per-sec' => $stats['stats']['ops_per_sec'],
+            'relay-keys' => '',
+            'relay-memory-used' => $stats['memory']['used'],
+            'relay-memory-total' => $stats['memory']['total'],
+            'relay-memory-ratio' => round(($stats['memory']['used'] / $stats['memory']['total']) * 100, 2),
         ];
     }
 }
