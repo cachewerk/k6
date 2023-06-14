@@ -236,11 +236,21 @@ class k6ObjectCacheMetrics
         $hits = $wp_object_cache->count_hit_incall + $wp_object_cache->count_hit;
         $misses = $wp_object_cache->count_miss_incall + $wp_object_cache->count_miss;
 
+        $accessConnProperty = Closure::bind(function ($object) {
+            return $object->_conn;
+        }, null, $wp_object_cache->_object_cache);
+
+        $redis = $accessConnProperty($wp_object_cache->_object_cache);
+
         return self::buildMetrics(
             $hits,
             $misses,
             self::calculateHitRatio($hits, $misses),
-            self::calculateBytes($wp_object_cache->_cache)
+            self::calculateBytes($wp_object_cache->_cache),
+            self::mapRedisInfo(
+                $redis->info(),
+                $redis->getDBNum() ?? 0
+            )
         );
     }
 
