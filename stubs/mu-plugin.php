@@ -76,7 +76,7 @@ class k6ObjectCacheMetrics
             self::$client = 'phpredis';
         }
 
-        if ($wp_object_cache->_object_cache instanceof \LiteSpeed\Object_Cache) {
+        if (property_exists($wp_object_cache, '_object_cache') && $wp_object_cache->_object_cache instanceof \LiteSpeed\Object_Cache) {
             self::$cache = self::LiteSpeedCache;
             self::$client = 'phpredis';
         }
