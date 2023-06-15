@@ -348,7 +348,7 @@ class k6ObjectCacheMetrics
             'relay-misses' => $stats['stats']['misses'],
             'relay-hit-ratio' => $total > 0 ? round($stats['stats']['hits'] / ($total / 100), 2) : 100,
             'relay-ops-per-sec' => $stats['stats']['ops_per_sec'],
-            'relay-keys' => '',
+            'relay-keys' => '', // TODO: Calculate Relay keys
             'relay-memory-used' => $stats['memory']['used'],
             'relay-memory-total' => $stats['memory']['total'],
             'relay-memory-ratio' => round(($stats['memory']['used'] / $stats['memory']['total']) * 100, 2),
