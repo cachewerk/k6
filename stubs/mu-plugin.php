@@ -33,6 +33,8 @@ class k6ObjectCacheMetrics
 
     const LiteSpeedCache = 'litespeed-cache';
 
+    const APCuObjectCache = 'apcu-cache';
+
     protected static $cache;
 
     protected static $client;
@@ -48,7 +50,7 @@ class k6ObjectCacheMetrics
 
         $class = get_class($wp_object_cache);
 
-        if (strpos($class, 'RedisCachePro') === 0) {
+        if (strpos($class, 'ObjectCachePro') === 0 || strpos($class, 'RedisCachePro') === 0) {
             self::$cache = self::ObjectCachePro;
             self::$client = strtolower($wp_object_cache->clientName());
         }
@@ -78,6 +80,11 @@ class k6ObjectCacheMetrics
 
         if (property_exists($wp_object_cache, '_object_cache') && $wp_object_cache->_object_cache instanceof \LiteSpeed\Object_Cache) {
             self::$cache = self::LiteSpeedCache;
+            self::$client = 'phpredis';
+        }
+
+        if (method_exists($wp_object_cache, 'getApcuAvailable')) {
+            self::$cache = self::APCuObjectCache;
             self::$client = 'phpredis';
         }
     }
@@ -183,6 +190,8 @@ class k6ObjectCacheMetrics
                 return self::getWpRedisMetrics();
             case self::LiteSpeedCache:
                 return self::getLiteSpeedCacheMetrics();
+            case self::APCuObjectCache:
+                return self::getAPCuCacheMetrics();
             default:
                 return '';
         }
@@ -210,14 +219,16 @@ class k6ObjectCacheMetrics
             $info->misses,
             $info->ratio,
             $info->bytes,
-            self::mapRedisInfo(
-                $wp_object_cache->redis_instance()->info(),
-                $wp_object_cache->diagnostics['database'] ?? 0
-            ),
-            self::mapRelayStats(
-                $stats,
-                $wp_object_cache->diagnostics['database'] ?? 0
-            )
+            [
+                self::mapRedisInfo(
+                    $wp_object_cache->redis_instance()->info(),
+                    $wp_object_cache->diagnostics['database'] ?? 0
+                ),
+                self::mapRelayStats(
+                    $stats,
+                    $wp_object_cache->diagnostics['database'] ?? 0
+                ),
+            ]
         );
     }
 
@@ -255,14 +266,38 @@ class k6ObjectCacheMetrics
             $misses,
             self::calculateHitRatio($hits, $misses),
             self::calculateBytes($wp_object_cache->_cache),
-            self::mapRedisInfo(
-                $redis->info(),
-                $redis->getDBNum() ?? 0
-            )
+            [
+                self::mapRedisInfo($redis->info(), $redis->getDBNum() ?? 0),
+            ]
         );
     }
 
-    protected static function buildMetrics(int $hits, int $misses, float $ratio, $bytes, array $redisSample = [], array $relaySample = []): string
+    protected static function getAPCuCacheMetrics(): string
+    {
+        global $wp_object_cache;
+
+        $info = apcu_cache_info(true);
+        $total = $info['num_hits'] + $info['num_misses'];
+
+        $sample = [
+            'store-hits' => $info['num_hits'],
+            'store-misses' => $info['num_misses'],
+            'store-hit-ratio' => $total > 0 ? round($info['num_hits'] / ($total / 100), 2) : 0,
+            'redis-keys' => $info['num_entries'],
+        ];
+
+        return self::buildMetrics(
+            $wp_object_cache->cache_hits,
+            $wp_object_cache->cache_misses,
+            self::calculateHitRatio($wp_object_cache->cache_hits, $wp_object_cache->cache_misses),
+            null,
+            [
+                $sample,
+            ]
+        );
+    }
+
+    protected static function buildMetrics(int $hits, int $misses, float $ratio, $bytes, array $samples = []): string
     {
         global $timestart;
 
@@ -278,16 +313,10 @@ class k6ObjectCacheMetrics
             $requestStart ? round((microtime(true) - $requestStart) * 1000, 2) : null
         );
 
-        if ($redisSample) {
+        foreach ($samples as $set) {
             $metrics .= ' ' . implode(' ', array_map(static function ($metric, $value) {
                 return "sample#{$metric}={$value}";
-            }, array_keys($redisSample), $redisSample));
-        }
-
-        if ($relaySample) {
-            $metrics .= ' ' . implode(' ', array_map(static function ($metric, $value) {
-                return "sample#{$metric}={$value}";
-            }, array_keys($relaySample), $relaySample));
+            }, array_keys($set), $set));
         }
 
         return $metrics;
