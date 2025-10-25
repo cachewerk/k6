@@ -1,5 +1,5 @@
 import http from 'k6/http'
-import { Rate, Trend } from 'k6/metrics'
+import { Rate } from 'k6/metrics'
 import { check, group, fail, sleep } from 'k6'
 
 import Metrics from './lib/metrics.js';
