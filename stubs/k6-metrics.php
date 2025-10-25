@@ -85,7 +85,7 @@ class k6ObjectCacheMetrics
 
         if (method_exists($wp_object_cache, 'getApcuAvailable')) {
             self::$cache = self::APCuObjectCache;
-            self::$client = 'phpredis';
+            self::$client = 'apcu';
         }
     }
 
@@ -283,7 +283,7 @@ class k6ObjectCacheMetrics
             'store-hits' => $info['num_hits'],
             'store-misses' => $info['num_misses'],
             'store-hit-ratio' => $total > 0 ? round($info['num_hits'] / ($total / 100), 2) : 0,
-            'redis-keys' => $info['num_entries'],
+            'apcu-keys' => $info['num_entries'],
         ];
 
         return self::buildMetrics(
