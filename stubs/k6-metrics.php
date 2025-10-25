@@ -2,10 +2,10 @@
 /*
  * Plugin Name: CacheWerk k6 (MU)
  * Plugin URI: https://github.com/cachewerk/k6
- * Description: ...
+ * Description: Collects and prints object cache metrics for k6 load testing.
  * Version: 1.0.0
- * Author: Rhubarb Group
- * Author URI: https://rhubarb.group
+ * Author: CacheWerk
+ * Author URI: https://cachewerk.com
  * Requires PHP: 7.2
  */
 
