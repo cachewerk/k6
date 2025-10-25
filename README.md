@@ -8,7 +8,7 @@ Make sure [k6 is installed](https://k6.io/docs/getting-started/installation/). A
 
 ## Metrics
 
-When Object Cache Pro is installed, custom metrics for [WordPress, Redis and Relay](lib/metrics.js) are automatically collected. For other plugins, use the [`k6-metrics.php`](./stubs/mu-plugin.php) as a must-use plugin to capture more metrics.
+When Object Cache Pro is installed, custom metrics for [WordPress, Redis and Relay](lib/metrics.js) are automatically collected. For other plugins, use the [`k6-metrics.php`](./stubs/k6-metrics.php) as a must-use plugin to capture more metrics.
 
 ## Tests
 
