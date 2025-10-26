@@ -304,13 +304,14 @@ class k6ObjectCacheMetrics
         $requestStart = $_SERVER['REQUEST_TIME_FLOAT'] ?? $timestart;
 
         $metrics = sprintf(
-            'metric#hits=%d metric#misses=%d metric#hit-ratio=%s metric#bytes=%d metric#sql-queries=%d metric#ms-total=%s',
+            'metric#hits=%d metric#misses=%d metric#hit-ratio=%s metric#bytes=%d metric#sql-queries=%d metric#ms-total=%s sample#sys-load=%.03f',
             $hits,
             $misses,
             $ratio,
             $bytes,
             function_exists('\get_num_queries') ? \get_num_queries() : null,
-            $requestStart ? round((microtime(true) - $requestStart) * 1000, 2) : null
+            $requestStart ? round((microtime(true) - $requestStart) * 1000, 2) : null,
+            sys_getloadavg()[0] ?? null
         );
 
         foreach ($samples as $set) {

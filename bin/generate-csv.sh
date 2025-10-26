@@ -40,6 +40,8 @@ metrics=(
     # "data_sent"
     "x_using_phpredis"
     "x_using_relay"
+    "x_using_predis"
+    "x_using_apcu"
     "redis_ops_per_sec"
     "redis_hit_ratio"
     # "redis_hits"
@@ -58,6 +60,7 @@ metrics=(
     "wp_ms_cache_ratio"
     "wp_prefetches"
     "wp_sql_queries"
+    "wp_sys_load"
     "wp_store_reads"
     "wp_store_writes"
 )
