@@ -371,17 +371,25 @@ class k6ObjectCacheMetrics
 
     protected static function mapRelayStats(array $stats, int $database): array
     {
+        if (empty($stats)) {
+            return [];
+        }
+
         $total = intval($stats['stats']['hits'] + $stats['stats']['misses']);
 
         return [
             'relay-hits' => $stats['stats']['hits'],
             'relay-misses' => $stats['stats']['misses'],
-            'relay-hit-ratio' => $total > 0 ? round($stats['stats']['hits'] / ($total / 100), 2) : 100,
+            'relay-hit-ratio' => $total > 0
+                ? round($stats['stats']['hits'] / ($total / 100), 2)
+                : 100,
             'relay-ops-per-sec' => $stats['stats']['ops_per_sec'],
             'relay-keys' => '', // TODO: Calculate Relay keys
             'relay-memory-used' => $stats['memory']['used'],
             'relay-memory-total' => $stats['memory']['total'],
-            'relay-memory-ratio' => round(($stats['memory']['used'] / $stats['memory']['total']) * 100, 2),
+            'relay-memory-ratio' => $stats['memory']['total'] > 0
+                ? round(($stats['memory']['used'] / $stats['memory']['total']) * 100, 2)
+                : null,
         ];
     }
 }
