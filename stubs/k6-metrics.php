@@ -61,13 +61,14 @@ class k6ObjectCacheMetrics
             $instance = $wp_object_cache->redis_instance();
 
             $client = 'predis';
+            $class = get_class($instance);
 
-            if ($instance instanceof \Redis) {
-                $client = 'phpredis';
-            }
-
-            if ($instance instanceof \Relay\Relay) {
+            if (stripos($class, 'credis') !== false) {
+                $client = 'credis';
+            } elseif (stripos($class, 'relay') !== false) {
                 $client = 'relay';
+            } elseif (stripos($class, 'redis') !== false) {
+                $client = 'phpredis';
             }
 
             self::$client = $client;
