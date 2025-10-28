@@ -19,6 +19,8 @@ add_action('login_head', ['k6ObjectCacheMetrics', 'shouldPrint']);
 add_action('in_admin_header', ['k6ObjectCacheMetrics', 'shouldPrint']);
 add_action('rss_tag_pre', ['k6ObjectCacheMetrics', 'shouldPrint']);
 
+add_filter('http_response', ['k6ObjectCacheMetrics', 'interceptHttpResponse']);
+
 add_action('shutdown', ['k6ObjectCacheMetrics', 'maybePrint'], PHP_INT_MAX);
 
 class k6ObjectCacheMetrics
@@ -38,6 +40,8 @@ class k6ObjectCacheMetrics
     protected static $cache;
 
     protected static $client;
+
+    protected static $httpRequest = 0;
 
     public static function init(): void
     {
@@ -396,5 +400,12 @@ class k6ObjectCacheMetrics
                 ? round(($stats['memory']['used'] / $stats['memory']['total']) * 100, 2)
                 : null,
         ];
+    }
+
+    public static function interceptHttpResponse($response)
+    {
+        static::$httpRequest++;
+
+        return $response;
     }
 }
