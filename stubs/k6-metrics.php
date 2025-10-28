@@ -277,6 +277,10 @@ class k6ObjectCacheMetrics
     {
         global $wp_object_cache;
 
+        if (! function_exists('apcu_cache_info')) {
+            return '';
+        }
+
         $info = apcu_cache_info(true);
         $total = $info['num_hits'] + $info['num_misses'];
 
