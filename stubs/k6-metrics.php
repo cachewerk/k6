@@ -37,6 +37,8 @@ class k6ObjectCacheMetrics
 
     const APCuObjectCache = 'apcu-cache';
 
+    const MemcachedRedux = 'memcached-redux';
+
     protected static $cache;
 
     protected static $client;
@@ -92,6 +94,11 @@ class k6ObjectCacheMetrics
             self::$cache = self::APCuObjectCache;
             self::$client = 'apcu';
         }
+
+        if (method_exists($wp_object_cache, 'get_mc')) {
+            self::$cache = self::MemcachedRedux;
+            self::$client = 'memcached';
+        } 
     }
 
     public static function maybePrint(): void
@@ -197,6 +204,8 @@ class k6ObjectCacheMetrics
                 return self::getLiteSpeedCacheMetrics();
             case self::APCuObjectCache:
                 return self::getAPCuCacheMetrics();
+            case self::MemcachedRedux:
+                return self::getMemcachedReduxMetrics();
             default:
                 return '';
         }
@@ -303,6 +312,19 @@ class k6ObjectCacheMetrics
             [
                 $sample,
             ]
+        );
+    }
+
+    protected static function getMemcachedReduxMetrics(): string
+    {
+        global $wp_object_cache;
+
+        return self::buildMetrics(
+            $wp_object_cache->cache_hits,
+            $wp_object_cache->cache_misses,
+            self::calculateHitRatio($wp_object_cache->cache_hits, $wp_object_cache->cache_misses),
+            null,
+            []
         );
     }
 
