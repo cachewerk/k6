@@ -1,0 +1,5 @@
+# Local secrets / config
+.env
+
+# Captured corpus working dir (keep the committed example traces)
+corpus/raw/

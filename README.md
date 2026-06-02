@@ -94,10 +94,28 @@ k6 run replay.js --env SITE_URL=http://lb \
   --execution-segment-sequence "0,1/4,2/4,3/4,1"
 ```
 
-A dummy endpoint for trying it out lives in
-[`stubs/replay-server.php`](./stubs/replay-server.php) — it fakes the work and
-prints a fake Object Cache Pro footnote comment so the metrics pipeline is
-exercised end-to-end. Swap in the real payload executor later.
+There are two endpoints to drive with `replay.js`:
+
+**Real executor — [`replay/index.php`](./replay/index.php)** replays captured
+traces (`corpus/NNNNN.json`) against a real Redis using the configured client
+(phpredis/relay), and emits a measured Object Cache Pro-style footnote so the
+metrics above are real. Configure it with environment variables — copy
+[`.env.example`](./.env.example) to `.env` and adjust:
+
+```bash
+cp .env.example .env          # set REPLAY_REDIS_* (and REPLAY_REDIS_CLIENT)
+php -S 0.0.0.0:8080 replay/index.php
+k6 run replay.js --env SITE_URL=http://localhost:8080
+```
+
+SQL is reproduced as a sleep by default (`REPLAY_SQL_MODE=sleep`, no database
+needed); set `REPLAY_SQL_MODE=execute` with `REPLAY_DB_*` to run the captured
+queries against MySQL instead. For real benchmarking, serve via nginx +
+PHP-FPM so the corpus and connections are preloaded/persisted per worker.
+
+**Dummy — [`stubs/replay-server.php`](./stubs/replay-server.php)** needs no
+Redis: it fakes the work and prints a fake footnote, useful for exercising
+`replay.js` and the metrics pipeline offline.
 
 ```bash
 php -S 0.0.0.0:8080 stubs/replay-server.php

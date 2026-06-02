@@ -51,7 +51,7 @@
       "us": 95,
       "mode": "single",
       "cmds": [
-        { "cmd": "SETEX", "args": ["wp:ocp:1:options:rewrite_rules", "0", { "b64": "TzozMzoiQUNQX1Jld3JpdGVfUnVsZXMiOjI6e3M6Nzoi..." }], "value_bytes": 2048, "ttl": 0 }
+        { "cmd": "SET", "args": ["wp:ocp:1:options:rewrite_rules", { "b64": "TzozMzoiQUNQX1Jld3JpdGVfUnVsZXMiOjI6e3M6Nzoi..." }], "value_bytes": 2048, "ttl": 0 }
       ]
     },
     { "op": "php", "us": 920 },
