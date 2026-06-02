@@ -44,6 +44,46 @@ k6 run woo-customer.js --env SITE_URL=https://example.com --env BYPASS_CACHE=1
 
 This script requires [seeded users](#seeding-users).
 
+### `replay.js`
+
+Replays a fixed corpus of captured requests ("traces") against a stateless
+replay endpoint, instead of driving a real WordPress site. Every run executes
+the *identical* workload — the same traces in the same per-VU order — so
+results are comparable across runs and across horizontally scaled load
+generators. k6 owns which trace runs when; the server just executes whatever
+`id` it is handed.
+
+By default it fires 100 unique traces, each repeated until 10,000 requests are
+reached, as fast as the system under test allows (closed-loop).
+
+```bash
+k6 run replay.js --env SITE_URL=http://localhost:8080
+k6 run replay.js --env SITE_URL=http://localhost:8080 --env VUS=200 --env TOTAL=10000
+```
+
+Tunable via env vars: `TRACES` (unique traces, default 100), `TOTAL` (total
+requests, default 10000), `VUS` (concurrency, default 100), `REPLAY_PATH`
+(endpoint path, default `/render`).
+
+To scale across multiple load-generator machines, use k6 execution segments —
+the trace mapping is segment-safe, so coverage stays complete and reproducible:
+
+```bash
+# machine 1 of 4
+k6 run replay.js --env SITE_URL=http://lb \
+  --execution-segment "0:1/4" \
+  --execution-segment-sequence "0,1/4,2/4,3/4,1"
+```
+
+A dummy endpoint for trying it out lives in
+[`stubs/replay-server.php`](./stubs/replay-server.php) — it fakes the work and
+returns the metric shape `replay.js` parses. Swap in the real payload executor
+later.
+
+```bash
+php -S 0.0.0.0:8080 stubs/replay-server.php
+```
+
 ## Reset WooCommerce
 
 ```
