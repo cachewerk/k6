@@ -1,0 +1,14 @@
+{
+  "schema": 1,
+  "generator": "k6-capture-mu-plugin/1.0",
+  "captured_at": "2026-06-02T12:00:00Z",
+  "site": "https://example.com",
+  "cache": "object-cache-pro",
+  "client": "relay",
+  "count": 3,
+  "traces": [
+    { "id": 0, "file": "00000.json", "method": "GET", "url": "/", "ms_total": 11.54, "redis_ops": 7, "sql_queries": 2 },
+    { "id": 1, "file": "00001.json", "method": "GET", "url": "/sample-page/", "ms_total": 9.81, "redis_ops": 5, "sql_queries": 1 },
+    { "id": 2, "file": "00002.json", "method": "GET", "url": "/?p=42", "ms_total": 14.27, "redis_ops": 12, "sql_queries": 4 }
+  ]
+}

@@ -44,6 +44,83 @@ k6 run woo-customer.js --env SITE_URL=https://example.com --env BYPASS_CACHE=1
 
 This script requires [seeded users](#seeding-users).
 
+### `replay.js`
+
+Replays a fixed corpus of captured requests ("traces") against a stateless
+replay endpoint, instead of driving a real WordPress site. Every run executes
+the *identical* workload — the same traces in the same per-VU order — so
+results are comparable across runs and across horizontally scaled load
+generators. k6 owns which trace runs when; the server just executes whatever
+`id` it is handed.
+
+By default it fires 100 unique traces, each repeated until 10,000 requests are
+reached, as fast as the system under test allows (closed-loop).
+
+```bash
+k6 run replay.js --env SITE_URL=http://localhost:8080
+k6 run replay.js --env SITE_URL=http://localhost:8080 --env VUS=200
+```
+
+The load profile is selectable via `--env SCENARIO=`:
+
+```bash
+# fixed (default): exactly TOTAL requests, each trace run equally often
+k6 run replay.js --env SITE_URL=http://localhost:8080 --env SCENARIO=fixed --env TOTAL=10000
+
+# ramping: ramp concurrency up/down to find the saturation point
+k6 run replay.js --env SITE_URL=http://localhost:8080 --env SCENARIO=ramping \
+  --env STAGES="30s:50,1m:200,2m:200,30s:0"
+
+# constant: hold VUS for a duration
+k6 run replay.js --env SITE_URL=http://localhost:8080 --env SCENARIO=constant --env VUS=100 --env DURATION=2m
+```
+
+Tunable via env vars: `SCENARIO` (`fixed`/`ramping`/`constant`/`shared`),
+`TRACES` (unique traces, default 100), `TOTAL` (total requests, default 10000),
+`VUS` (concurrency, default 100), `STAGES`, `DURATION`, `START_VUS`,
+`MAX_DURATION`, `REPLAY_PATH` (endpoint path, default `/render`).
+
+Metrics are collected the same way as the other scripts — from the [Object
+Cache Pro footnote](lib/metrics.js) comment in the response body (enable OCP's
+`analytics.footnote` on the real SUT).
+
+To scale across multiple load-generator machines, use k6 execution segments —
+the trace mapping is segment-safe, so coverage stays complete and reproducible:
+
+```bash
+# machine 1 of 4
+k6 run replay.js --env SITE_URL=http://lb \
+  --execution-segment "0:1/4" \
+  --execution-segment-sequence "0,1/4,2/4,3/4,1"
+```
+
+There are two endpoints to drive with `replay.js`:
+
+**Real executor — [`replay/index.php`](./replay/index.php)** replays captured
+traces (`corpus/NNNNN.json`) against a real Redis using the configured client
+(phpredis/relay), and emits a measured Object Cache Pro-style footnote so the
+metrics above are real. Configure it with environment variables — copy
+[`.env.example`](./.env.example) to `.env` and adjust:
+
+```bash
+cp .env.example .env          # set REPLAY_REDIS_* (and REPLAY_REDIS_CLIENT)
+php -S 0.0.0.0:8080 replay/index.php
+k6 run replay.js --env SITE_URL=http://localhost:8080
+```
+
+SQL is reproduced as a sleep by default (`REPLAY_SQL_MODE=sleep`, no database
+needed); set `REPLAY_SQL_MODE=execute` with `REPLAY_DB_*` to run the captured
+queries against MySQL instead. For real benchmarking, serve via nginx +
+PHP-FPM so the corpus and connections are preloaded/persisted per worker.
+
+**Dummy — [`stubs/replay-server.php`](./stubs/replay-server.php)** needs no
+Redis: it fakes the work and prints a fake footnote, useful for exercising
+`replay.js` and the metrics pipeline offline.
+
+```bash
+php -S 0.0.0.0:8080 stubs/replay-server.php
+```
+
 ## Reset WooCommerce
 
 ```

@@ -1,0 +1,85 @@
+{
+  "schema": 1,
+  "id": 0,
+  "request": {
+    "method": "GET",
+    "url": "/",
+    "status": 200,
+    "captured_at": "2026-06-02T12:00:00Z"
+  },
+  "summary": {
+    "ms_total": 11.54,
+    "ms_php": 8.60,
+    "ms_redis": 1.02,
+    "ms_sql": 1.92,
+    "redis_reads": 4,
+    "redis_writes": 3,
+    "redis_hits": 3,
+    "redis_misses": 1,
+    "hit_ratio": 75.0,
+    "sql_queries": 2,
+    "bytes": 61040
+  },
+  "timeline": [
+    { "op": "php", "us": 612 },
+    {
+      "op": "redis",
+      "us": 310,
+      "mode": "single",
+      "cmds": [
+        { "cmd": "GET", "args": ["wp:ocp:1:options:alloptions"], "reply_bytes": 48213, "hit": true }
+      ]
+    },
+    { "op": "php", "us": 1840 },
+    {
+      "op": "redis",
+      "us": 60,
+      "mode": "single",
+      "cmds": [
+        { "cmd": "GET", "args": ["wp:ocp:1:options:rewrite_rules"], "reply_bytes": 0, "hit": false }
+      ]
+    },
+    {
+      "op": "sql",
+      "us": 742,
+      "query": "SELECT option_value FROM wp_options WHERE option_name = 'rewrite_rules' LIMIT 1",
+      "caller": "require('wp-blog-header.php'), wp(), WP->main, WP->query_posts, ..., get_option",
+      "rows": 1
+    },
+    {
+      "op": "redis",
+      "us": 95,
+      "mode": "single",
+      "cmds": [
+        { "cmd": "SET", "args": ["wp:ocp:1:options:rewrite_rules", { "b64": "TzozMzoiQUNQX1Jld3JpdGVfUnVsZXMiOjI6e3M6Nzoi..." }], "value_bytes": 2048, "ttl": 0 }
+      ]
+    },
+    { "op": "php", "us": 920 },
+    {
+      "op": "sql",
+      "us": 1180,
+      "query": "SELECT wp_posts.ID FROM wp_posts WHERE wp_posts.post_type = 'post' AND wp_posts.post_status = 'publish' ORDER BY wp_posts.post_date DESC LIMIT 0, 10",
+      "caller": "require('wp-blog-header.php'), wp(), WP->main, WP->query_posts, WP_Query->query, WP_Query->get_posts",
+      "rows": 10
+    },
+    {
+      "op": "redis",
+      "us": 150,
+      "mode": "pipeline",
+      "cmds": [
+        { "cmd": "SETEX", "args": ["wp:ocp:1:posts:101", "300", { "b64": "TzU6IldQX1Bvc3QiOjIzOntzOjI6IklEIjtpOjEwMTs..." }], "value_bytes": 5120, "ttl": 300 },
+        { "cmd": "SETEX", "args": ["wp:ocp:1:posts:102", "300", { "b64": "TzU6IldQX1Bvc3QiOjIzOntzOjI6IklEIjtpOjEwMjs..." }], "value_bytes": 4880, "ttl": 300 }
+      ]
+    },
+    {
+      "op": "redis",
+      "us": 405,
+      "mode": "pipeline",
+      "cmds": [
+        { "cmd": "GET", "args": ["wp:ocp:1:post_meta:101"], "reply_bytes": 1320, "hit": true },
+        { "cmd": "GET", "args": ["wp:ocp:1:post_meta:102"], "reply_bytes": 1290, "hit": true }
+      ]
+    },
+    { "op": "php", "us": 5230 }
+  ]
+}
