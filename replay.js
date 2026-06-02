@@ -16,12 +16,8 @@ import { validateSiteUrl } from './lib/helpers.js'
  * The server is dumb: k6 owns which trace runs and in which order, the server
  * just executes whatever `id` it is handed. All determinism lives here.
  *
- * Workload: TRACES unique traces, each repeated until TOTAL requests are fired
- * (default: 100 traces x 100 repeats = 10,000 requests), run as fast as the
- * SUT allows (closed-loop, no think time).
- *
  *   k6 run replay.js --env SITE_URL=http://localhost:8080
- *   k6 run replay.js --env SITE_URL=http://localhost:8080 --env VUS=200
+ *   k6 run replay.js --env SITE_URL=http://localhost:8080 --env SCENARIO=ramping
  *
  * Scale across N load-generator machines with execution segments (the trace
  * mapping below is segment-safe, so coverage stays complete and reproducible):
@@ -33,22 +29,15 @@ import { validateSiteUrl } from './lib/helpers.js'
  */
 
 const TRACES = Number(__ENV.TRACES || 100)        // number of unique captured traces
-const TOTAL = Number(__ENV.TOTAL || 10000)        // total requests to fire
-const VUS = Number(__ENV.VUS || 100)              // concurrency (closed-loop)
+const TOTAL = Number(__ENV.TOTAL || 10000)        // total requests to fire (count-based scenarios)
+const VUS = Number(__ENV.VUS || 100)              // concurrency
+const SCENARIO = __ENV.SCENARIO || 'fixed'        // fixed | ramping | constant | shared
 const REPLAY_PATH = __ENV.REPLAY_PATH || '/render'
-
-// per-vu-iterations: total = VUS * ITER_PER_VU
-const ITER_PER_VU = Math.ceil(TOTAL / VUS)
 
 export const options = {
     summaryTimeUnit: 'ms',
     scenarios: {
-        replay: {
-            executor: 'per-vu-iterations',
-            vus: VUS,
-            iterations: ITER_PER_VU,
-            maxDuration: __ENV.MAX_DURATION || '30m',
-        },
+        replay: buildScenario(),
     },
     thresholds: {
         http_req_failed: ['rate<0.01'],
@@ -62,6 +51,75 @@ export const options = {
     },
 }
 
+/**
+ * Pick the load profile via `--env SCENARIO=...`:
+ *
+ *   fixed    (default) per-vu-iterations — exactly TOTAL requests, each trace
+ *                      run an equal number of times. Most reproducible; best
+ *                      for apples-to-apples capability comparison.
+ *   ramping            ramping-vus — ramp concurrency up/down over STAGES to
+ *                      find the saturation point. Duration-based.
+ *   constant           constant-vus — hold VUS for DURATION.
+ *   shared             shared-iterations — TOTAL requests pulled from a shared
+ *                      pool as fast as possible (set is fixed, per-trace count
+ *                      is best-effort rather than exact).
+ *
+ * Tunables: VUS, TOTAL, DURATION, START_VUS, STAGES, MAX_DURATION.
+ * STAGES format: "30s:50,1m:200,2m:200,30s:0" (duration:targetVUs, ...)
+ */
+function buildScenario () {
+    switch (SCENARIO) {
+        case 'ramping':
+            return {
+                executor: 'ramping-vus',
+                startVUs: Number(__ENV.START_VUS || 0),
+                stages: parseStages(__ENV.STAGES) || [
+                    { duration: '30s', target: 50 },
+                    { duration: '1m', target: 200 },
+                    { duration: '2m', target: 200 },
+                    { duration: '30s', target: 0 },
+                ],
+                gracefulRampDown: __ENV.GRACEFUL_RAMP_DOWN || '10s',
+            }
+
+        case 'constant':
+            return {
+                executor: 'constant-vus',
+                vus: VUS,
+                duration: __ENV.DURATION || '2m',
+            }
+
+        case 'shared':
+            return {
+                executor: 'shared-iterations',
+                vus: VUS,
+                iterations: TOTAL,
+                maxDuration: __ENV.MAX_DURATION || '30m',
+            }
+
+        case 'fixed':
+        default:
+            return {
+                executor: 'per-vu-iterations',
+                vus: VUS,
+                iterations: Math.ceil(TOTAL / VUS), // total = VUS * iterations
+                maxDuration: __ENV.MAX_DURATION || '30m',
+            }
+    }
+}
+
+function parseStages (spec) {
+    if (! spec) {
+        return null
+    }
+
+    return spec.split(',').map(stage => {
+        const [duration, target] = stage.split(':')
+
+        return { duration: duration.trim(), target: Number(target) }
+    })
+}
+
 // Metrics reported back by the replay endpoint (parsed defensively below, so
 // the script still works if the endpoint returns no body / a different shape).
 const redisMs = new Trend('replay_redis_ms', true)
@@ -73,19 +131,17 @@ const cacheMisses = new Counter('replay_cache_misses')
 export function setup () {
     validateSiteUrl(__ENV.SITE_URL)
 
-    console.info(`Replaying ${TRACES} traces x ${Math.round(TOTAL / TRACES)} = ${VUS * ITER_PER_VU} requests across ${VUS} VUs`)
+    console.info(`Replaying ${TRACES} traces using "${SCENARIO}" scenario`)
 }
 
 export default function () {
-    // Globally-unique, segment-safe iteration index (0-based). `idInTest` is
-    // stable across VUs and execution segments, so this mapping is identical
-    // every run and never overlaps between load-generator machines.
-    const globalIter = (exec.vu.idInTest - 1) * ITER_PER_VU + exec.vu.iterationInScenario
-
-    // Map to one of TRACES traces, offset by VU so concurrent VUs work on
-    // different traces at any instant (avoids artificial lockstep on trace 0)
-    // while keeping each trace's total execution count fixed and deterministic.
-    const traceId = (globalIter + (exec.vu.idInTest - 1)) % TRACES
+    // Deterministic, segment-safe trace selection. Each VU walks the trace
+    // corpus in order, offset by its global VU id so concurrent VUs work on
+    // different traces at any instant (no artificial lockstep on trace 0).
+    // `idInTest` is stable across VUs and execution segments, and this mapping
+    // needs no shared state, so it is identical every run and never overlaps
+    // between load-generator machines — regardless of the chosen scenario.
+    const traceId = (exec.vu.iterationInScenario + (exec.vu.idInTest - 1)) % TRACES
 
     const response = http.get(`${__ENV.SITE_URL}${REPLAY_PATH}?id=${traceId}`, {
         tags: { trace: String(traceId) },

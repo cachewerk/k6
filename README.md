@@ -58,12 +58,27 @@ reached, as fast as the system under test allows (closed-loop).
 
 ```bash
 k6 run replay.js --env SITE_URL=http://localhost:8080
-k6 run replay.js --env SITE_URL=http://localhost:8080 --env VUS=200 --env TOTAL=10000
+k6 run replay.js --env SITE_URL=http://localhost:8080 --env VUS=200
 ```
 
-Tunable via env vars: `TRACES` (unique traces, default 100), `TOTAL` (total
-requests, default 10000), `VUS` (concurrency, default 100), `REPLAY_PATH`
-(endpoint path, default `/render`).
+The load profile is selectable via `--env SCENARIO=`:
+
+```bash
+# fixed (default): exactly TOTAL requests, each trace run equally often
+k6 run replay.js --env SITE_URL=http://localhost:8080 --env SCENARIO=fixed --env TOTAL=10000
+
+# ramping: ramp concurrency up/down to find the saturation point
+k6 run replay.js --env SITE_URL=http://localhost:8080 --env SCENARIO=ramping \
+  --env STAGES="30s:50,1m:200,2m:200,30s:0"
+
+# constant: hold VUS for a duration
+k6 run replay.js --env SITE_URL=http://localhost:8080 --env SCENARIO=constant --env VUS=100 --env DURATION=2m
+```
+
+Tunable via env vars: `SCENARIO` (`fixed`/`ramping`/`constant`/`shared`),
+`TRACES` (unique traces, default 100), `TOTAL` (total requests, default 10000),
+`VUS` (concurrency, default 100), `STAGES`, `DURATION`, `START_VUS`,
+`MAX_DURATION`, `REPLAY_PATH` (endpoint path, default `/render`).
 
 To scale across multiple load-generator machines, use k6 execution segments —
 the trace mapping is segment-safe, so coverage stays complete and reproducible:
