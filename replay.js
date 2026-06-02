@@ -1,8 +1,9 @@
 import http from 'k6/http'
 import exec from 'k6/execution'
 import { check } from 'k6'
-import { Trend, Counter } from 'k6/metrics'
+import { Rate } from 'k6/metrics'
 
+import Metrics from './lib/metrics.js'
 import { validateSiteUrl } from './lib/helpers.js'
 
 /**
@@ -120,13 +121,13 @@ function parseStages (spec) {
     })
 }
 
-// Metrics reported back by the replay endpoint (parsed defensively below, so
-// the script still works if the endpoint returns no body / a different shape).
-const redisMs = new Trend('replay_redis_ms', true)
-const totalMs = new Trend('replay_total_ms', true)
-const cmdCount = new Trend('replay_cmd_count')
-const cacheHits = new Counter('replay_cache_hits')
-const cacheMisses = new Counter('replay_cache_misses')
+const errorRate = new Rate('errors')
+
+// Object cache metrics are parsed from the Object Cache Pro footnote comment in
+// the response body — the same shared `Metrics` class the other scripts use.
+// For the real SUT, enable OCP's `analytics.footnote`; the dummy endpoint
+// prints a fake footnote so this works for local testing.
+const metrics = new Metrics()
 
 export function setup () {
     validateSiteUrl(__ENV.SITE_URL)
@@ -151,25 +152,6 @@ export default function () {
         'response code is 200': response => response.status === 200,
     })
 
-    addReplayMetrics(response)
-}
-
-function addReplayMetrics (response) {
-    let metrics
-
-    try {
-        metrics = response.json()
-    } catch (e) {
-        return // non-JSON body (e.g. the real SUT) — nothing to record here
-    }
-
-    if (! metrics || typeof metrics !== 'object') {
-        return
-    }
-
-    if (metrics.redis_ms !== undefined) redisMs.add(Number(metrics.redis_ms))
-    if (metrics.total_ms !== undefined) totalMs.add(Number(metrics.total_ms))
-    if (metrics.cmd_count !== undefined) cmdCount.add(Number(metrics.cmd_count))
-    if (metrics.hits !== undefined) cacheHits.add(Number(metrics.hits))
-    if (metrics.misses !== undefined) cacheMisses.add(Number(metrics.misses))
+    errorRate.add(response.status >= 400)
+    metrics.addResponseMetrics(response)
 }

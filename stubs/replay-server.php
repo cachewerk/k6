@@ -13,7 +13,11 @@ declare(strict_types=1);
  * What it demonstrates:
  *   - the endpoint is stateless: k6 hands it `?id=N`, it executes trace N
  *   - the corpus is preloaded once at startup (no per-request file I/O noise)
- *   - it returns the JSON metric shape `replay.js` knows how to parse
+ *   - it prints a fake Object Cache Pro footnote comment, the same shape the
+ *     real plugin emits (see `k6-metrics.php`) and that `lib/metrics.js` parses
+ *
+ * The advertised client can be set with `?client=relay|phpredis|predis|apcu`
+ * (default: relay), so the `using-*` metrics in `replay.js` get populated.
  *
  * Run it with PHP's built-in server (use real nginx + PHP-FPM for a realistic
  * process model when benchmarking for real):
@@ -78,13 +82,45 @@ $redisEnd = hrtime(true);
 
 $hits = (int) round($trace['commands'] * $trace['hit_ratio']);
 $misses = $trace['commands'] - $hits;
+$ratio = $trace['commands'] > 0 ? round($hits / ($trace['commands'] / 100), 1) : 100;
+$totalMs = round(($redisEnd - $start) / 1e6, 2);
 
-header('Content-Type: application/json');
-echo json_encode([
-    'id' => $id,
-    'total_ms' => ($redisEnd - $start) / 1e6,
-    'redis_ms' => ($redisEnd - $redisStart) / 1e6,
-    'cmd_count' => $trace['commands'],
-    'hits' => $hits,
-    'misses' => $misses,
-]);
+$client = isset($_GET['client']) ? preg_replace('/[^a-z]/', '', strtolower($_GET['client'])) : 'relay';
+$client = $client !== '' ? $client : 'relay';
+
+// Fake Object Cache Pro footnote — same format the real mu-plugin prints
+// (see k6-metrics.php) and that lib/metrics.js parses out of the response body.
+$footnote = sprintf(
+    '<!-- plugin=object-cache-pro client=%s '
+        . 'metric#hits=%d metric#misses=%d metric#hit-ratio=%s metric#bytes=%d '
+        . 'metric#sql-queries=%d metric#ms-total=%s sample#sys-load=%.2f '
+        . 'sample#redis-hits=%d sample#redis-hit-ratio=%s sample#redis-ops-per-sec=%d '
+        . 'sample#redis-used-memory=%d sample#redis-keys=%d '
+        . 'sample#relay-hit-ratio=%s sample#relay-ops-per-sec=%d sample#relay-keys=%d '
+        . 'sample#relay-memory-active=%d sample#relay-memory-ratio=%s -->',
+    $client,
+    $hits,
+    $misses,
+    $ratio,
+    1024 * $trace['commands'],
+    $trace['commands'],
+    $totalMs,
+    sys_getloadavg()[0] ?? 0,
+    $hits * 3,
+    $ratio,
+    50000 + $id * 10,
+    8 * 1024 * 1024 + $id * 1024,
+    1000 + $id,
+    min(100, $ratio + 5),
+    60000 + $id * 10,
+    900 + $id,
+    32 * 1024 * 1024,
+    42.5
+);
+
+// Mimic a real WordPress page: HTML body with the footnote near the end.
+header('Content-Type: text/html; charset=UTF-8');
+echo "<!DOCTYPE html>\n<html><head><title>Trace {$id}</title></head><body>\n";
+echo "<p>Replayed trace {$id} ({$trace['commands']} commands)</p>\n";
+echo $footnote . "\n";
+echo "</body></html>\n";

@@ -80,6 +80,10 @@ Tunable via env vars: `SCENARIO` (`fixed`/`ramping`/`constant`/`shared`),
 `VUS` (concurrency, default 100), `STAGES`, `DURATION`, `START_VUS`,
 `MAX_DURATION`, `REPLAY_PATH` (endpoint path, default `/render`).
 
+Metrics are collected the same way as the other scripts — from the [Object
+Cache Pro footnote](lib/metrics.js) comment in the response body (enable OCP's
+`analytics.footnote` on the real SUT).
+
 To scale across multiple load-generator machines, use k6 execution segments —
 the trace mapping is segment-safe, so coverage stays complete and reproducible:
 
@@ -92,8 +96,8 @@ k6 run replay.js --env SITE_URL=http://lb \
 
 A dummy endpoint for trying it out lives in
 [`stubs/replay-server.php`](./stubs/replay-server.php) — it fakes the work and
-returns the metric shape `replay.js` parses. Swap in the real payload executor
-later.
+prints a fake Object Cache Pro footnote comment so the metrics pipeline is
+exercised end-to-end. Swap in the real payload executor later.
 
 ```bash
 php -S 0.0.0.0:8080 stubs/replay-server.php
