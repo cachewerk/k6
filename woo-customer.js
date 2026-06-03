@@ -3,6 +3,7 @@ import { Rate } from 'k6/metrics'
 import { check, group, fail, sleep } from 'k6'
 
 import Metrics from './lib/metrics.js';
+import { withProfile } from './lib/profiles.js'
 import { isOK, pageIsNotLogin } from './lib/checks.js'
 import { rand, validateSiteUrl, responseWasCached, bypassPageCacheCookies } from './lib/helpers.js'
 
@@ -73,7 +74,7 @@ export default function () {
     }
 
     group('Load homepage', function () {
-        const response = http.get(siteUrl, { jar })
+        const response = http.get(siteUrl, withProfile({ jar }))
 
         check(response, isOK)
             || (errorRate.add(1) && fail('status code was *not* 200'))
@@ -85,7 +86,7 @@ export default function () {
     sleep(rand(pause.min, pause.max))
 
     group('Login', function () {
-        const response = http.get(`${siteUrl}/my-account/`, { jar })
+        const response = http.get(`${siteUrl}/my-account/`, withProfile({ jar }))
 
         check(response, isOK)
             || (errorRate.add(1) && fail('status code was *not* 200'))
@@ -95,7 +96,7 @@ export default function () {
 
         const formResponse = response.submitForm({
             formSelector: 'form.woocommerce-form-login',
-            params: { jar },
+            params: withProfile({ jar }),
             fields: {
                 username: `test${rand(1, 100)}`,
                 password: '3405691582',
@@ -116,7 +117,7 @@ export default function () {
     sleep(rand(pause.min, pause.max))
 
     group('Load orders', function () {
-        const response = http.get(`${siteUrl}/my-account/orders/`, { jar })
+        const response = http.get(`${siteUrl}/my-account/orders/`, withProfile({ jar }))
 
         check(response, isOK)
             || (errorRate.add(1) && fail('status code was *not* 200'))
@@ -131,7 +132,7 @@ export default function () {
     sleep(rand(pause.min, pause.max))
 
     group('Load orders', function () {
-        const response = http.get(`${siteUrl}/my-account/orders/`, { jar })
+        const response = http.get(`${siteUrl}/my-account/orders/`, withProfile({ jar }))
 
         check(response, isOK)
             || (errorRate.add(1) && fail('status code was *not* 200'))

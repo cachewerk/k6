@@ -17,8 +17,8 @@ When Object Cache Pro is installed, custom metrics for [WordPress, Redis and Rel
 Fetches all WordPress sitemaps and requests random URLs.
 
 ```bash
-k6 run wp.js --env SITE_URL=https://example.com --env BYPASS_CACHE=1
-k6 run wp.js --vus=100 --duration=10m --env SITE_URL=https://example.com --env BYPASS_CACHE=1
+k6 run wp.js --env SITE_URL=https://example.com
+k6 run wp.js --vus=100 --duration=10m --env SITE_URL=https://example.com
 ```
 
 ### `woo-checkout.js`
@@ -29,20 +29,53 @@ Loads the homepage, selects and loads a random category, selects a random produc
 wp option update woocommerce_enable_guest_checkout no --autoload=no
 wp option update woocommerce_enable_signup_and_login_from_checkout yes --autoload=no
 
-k6 run woo-checkout.js --env SITE_URL=https://example.com --env BYPASS_CACHE=1
+k6 run woo-checkout.js --env SITE_URL=https://example.com
 ```
 
 Be sure to [reset WooCommerce](#reset-woocommerce) between test runs.
 
 ### `woo-customer.js`
 
-Loads the homepage, signs in, views at orders and then their account details.
+Loads the homepage, signs in, views orders and then account details.
 
 ```bash
-k6 run woo-customer.js --env SITE_URL=https://example.com --env BYPASS_CACHE=1
+k6 run woo-customer.js --env SITE_URL=https://example.com
 ```
 
 This script requires [seeded users](#seeding-users).
+
+## Environment variables
+
+| Variable | Required | Description |
+|---|---|---|
+| `SITE_URL` | Yes | Base URL of the site, without trailing slash |
+| `SITEMAP_URL` | No | Custom sitemap URL (default: `{SITE_URL}/wp-sitemap.xml`). `wp.js` only. |
+| `BYPASS_CACHE` | No | When set, sends cookies that bypass full-page caches |
+| `PROFILE` | No | Named benchmark profile (see [Profiles](#profiles)). Omit to use the site's default configuration. |
+| `OCP_TOKEN` | No | Object Cache Pro license token, passed as `X-OCP-Token`. Required when using an OCP profile. |
+| `PROJECT_ID` | No | k6 Cloud project ID |
+
+## Profiles
+
+Profiles select which object cache drop-in and client to use for a run, applied via HTTP request headers. Omitting `PROFILE` uses the site's PHP configuration unchanged.
+
+```bash
+k6 run wp.js --env SITE_URL=https://example.com --env PROFILE=ocp-relay --env OCP_TOKEN=abc123
+```
+
+### Available profiles
+
+| Profile | Drop-in | Client |
+|---|---|---|
+| `ocp-relay` | Object Cache Pro | Relay |
+| `ocp-phpredis` | Object Cache Pro | PhpRedis |
+| `ocp-predis` | Object Cache Pro | Predis |
+| `roc-phpredis` | Redis Object Cache | PhpRedis |
+| `roc-relay` | Redis Object Cache | Relay |
+| `roc-predis` | Redis Object Cache | Predis |
+| `none` | WordPress built-in memory cache | — |
+
+Profiles are defined in [`lib/profiles.js`](lib/profiles.js). Additional OCP options (`X-OCP-Compression`, `X-OCP-Serializer`, etc.) can be set by adding new profiles or extending existing ones. See `__data/README.md` for all supported headers.
 
 ## Reset WooCommerce
 
@@ -54,18 +87,8 @@ wp cache flush
 
 ## Seeding users
 
-Load tests that run with logged in users, use this seed command to create 100 users:
+Load tests that run with logged in users require 100 seeded users:
 
 ```
 for USR_NO in {1..100}; do wp user create "test${USR_NO}" "test${USR_NO}@example.com" --role=subscriber --user_pass=3405691582; done;
-```
-
-## Environment variables
-
-### Project ID
-
-You can set the k6 Cloud "Project ID" using the `PROJECT_ID` environment variable.
-
-```bash
-k6 cloud wp.js --env PROJECT_ID=123456 --env SITE_URL=https://example.com
 ```
