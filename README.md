@@ -22,6 +22,7 @@ k6 run k6-wp.js --vus=100 --duration=10m --env SITE_URL=https://example.com
 ```
 
 | Variable | Required | Description |
+|---|---|---|
 | `SITEMAP_URL` | No | Custom sitemap URL (default: `{SITE_URL}/wp-sitemap.xml`). |
 | `PROFILE` | No | Named benchmark profile (see [Profiles](#profiles)). Omit to use the site's default configuration. |
 
