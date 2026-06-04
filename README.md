@@ -12,16 +12,16 @@ When Object Cache Pro is installed, custom metrics for [WordPress, Redis and Rel
 
 ## Tests
 
-### `wp.js`
+### `k6-wp.js`
 
 Fetches all WordPress sitemaps and iterates through URLs sequentially for reproducible runs.
 
 ```bash
-k6 run wp.js --env SITE_URL=https://example.com
-k6 run wp.js --vus=100 --duration=10m --env SITE_URL=https://example.com
+k6 run k6-wp.js --env SITE_URL=https://example.com
+k6 run k6-wp.js --vus=100 --duration=10m --env SITE_URL=https://example.com
 ```
 
-### `screen.js`
+### `k6-screen.js`
 
 Runs multiple profiles sequentially in a single k6 invocation and produces a unified summary with metrics broken out per profile — useful for quickly ranking configurations before committing to full benchmark runs.
 
@@ -29,15 +29,15 @@ Each profile runs `VUS × ITERATIONS` requests. Defaults to all profiles if `PRO
 
 ```bash
 # Screen all profiles (500 requests each, 10 VUs × 50 iterations)
-K6_SECRET=secret SITE_URL=https://example.com k6 run screen.js
+K6_SECRET=secret SITE_URL=https://example.com k6 run k6-screen.js
 
 # Screen a subset
 K6_SECRET=secret SITE_URL=https://example.com \
-    k6 run screen.js -e PROFILES=ocp-relay,ocp-phpredis,roc-relay,none
+    k6 run k6-screen.js -e PROFILES=ocp-relay,ocp-phpredis,roc-relay,none
 
 # More requests, more VUs
 K6_SECRET=secret SITE_URL=https://example.com \
-    k6 run screen.js -e PROFILES=ocp-relay,ocp-phpredis -e ITERATIONS=100 -e VUS=20
+    k6 run k6-screen.js -e PROFILES=ocp-relay,ocp-phpredis -e ITERATIONS=100 -e VUS=20
 ```
 
 | Variable | Default | Description |
@@ -74,7 +74,7 @@ k6 run har-replay.js --env SITE_URL=https://example.com --env PROFILE=capture-3 
 
 See [HAR capture profiles](#har-capture-1-3) below.
 
-### `woo-checkout.js`
+### `k6-woo-checkout.js`
 
 Loads the homepage, selects and loads a random category, selects a random product and adds it to the cart, loads the cart page and then places an order.
 
@@ -82,17 +82,17 @@ Loads the homepage, selects and loads a random category, selects a random produc
 wp option update woocommerce_enable_guest_checkout no --autoload=no
 wp option update woocommerce_enable_signup_and_login_from_checkout yes --autoload=no
 
-k6 run woo-checkout.js --env SITE_URL=https://example.com
+k6 run k6-woo-checkout.js --env SITE_URL=https://example.com
 ```
 
 Be sure to [reset WooCommerce](#reset-woocommerce) between test runs.
 
-### `woo-customer.js`
+### `k6-woo-customer.js`
 
 Loads the homepage, signs in, views orders and then account details.
 
 ```bash
-k6 run woo-customer.js --env SITE_URL=https://example.com
+k6 run k6-woo-customer.js --env SITE_URL=https://example.com
 ```
 
 This script requires [seeded users](#seeding-users).
@@ -102,12 +102,12 @@ This script requires [seeded users](#seeding-users).
 | Variable | Required | Description |
 |---|---|---|
 | `SITE_URL` | Yes | Base URL of the site, without trailing slash |
-| `SITEMAP_URL` | No | Custom sitemap URL (default: `{SITE_URL}/wp-sitemap.xml`). `wp.js` only. |
+| `SITEMAP_URL` | No | Custom sitemap URL (default: `{SITE_URL}/wp-sitemap.xml`). `k6-wp.js` only. |
 | `BYPASS_CACHE` | No | When set, sends cookies that bypass full-page caches |
-| `PROFILE` | No | Named benchmark profile (see [Profiles](#profiles)). Omit to use the site's default configuration. `wp.js` only. |
-| `PROFILES` | No | Comma-separated list of profiles to screen. Defaults to all. `screen.js` only. |
-| `DURATION` | No | Seconds per profile (default: `30`). `screen.js` only. |
-| `VUS` | No | Virtual users per profile (default: `10`). `screen.js` only. |
+| `PROFILE` | No | Named benchmark profile (see [Profiles](#profiles)). Omit to use the site's default configuration. `k6-wp.js` only. |
+| `PROFILES` | No | Comma-separated list of profiles to screen. Defaults to all. `k6-screen.js` only. |
+| `DURATION` | No | Seconds per profile (default: `30`). `k6-screen.js` only. |
+| `VUS` | No | Virtual users per profile (default: `10`). `k6-screen.js` only. |
 | `K6_SECRET` | No | Secret token for the reset endpoint. When set, `setup()` flushes the object cache, transients, and WooCommerce sessions before the run. Must match `K6_SECRET` in `wp-config-benchmark.php`. |
 | `OCP_TOKEN` | No | Object Cache Pro license token, passed as `X-OCP-Token`. Required when using an OCP profile. |
 | `PROJECT_ID` | No | k6 Cloud project ID |
@@ -117,7 +117,7 @@ This script requires [seeded users](#seeding-users).
 Profiles select which object cache drop-in and client to use for a run, applied via HTTP request headers. Omitting `PROFILE` uses the site's PHP configuration unchanged.
 
 ```bash
-k6 run wp.js --env SITE_URL=https://example.com --env PROFILE=ocp-relay --env OCP_TOKEN=abc123
+k6 run k6-wp.js --env SITE_URL=https://example.com --env PROFILE=ocp-relay --env OCP_TOKEN=abc123
 ```
 
 ### Available profiles
