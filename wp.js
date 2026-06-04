@@ -1,9 +1,10 @@
 import http from 'k6/http'
+import exec from 'k6/execution'
 import { Rate } from 'k6/metrics'
 
 import Metrics from './lib/metrics.js'
 import { withProfile } from './lib/profiles.js'
-import { sample, validateSiteUrl, validateSitemapUrl, wpSitemap, responseWasCached, bypassPageCacheCookies } from './lib/helpers.js'
+import { validateSiteUrl, validateSitemapUrl, wpSitemap, responseWasCached, bypassPageCacheCookies } from './lib/helpers.js'
 
 export const options = {
     vus: 20,
@@ -48,7 +49,7 @@ export function teardown (data) {
 export default function (data) {
     const cookies = __ENV.BYPASS_CACHE ? bypassPageCacheCookies() : {}
 
-    const url = sample(data.urls)
+    const url = data.urls[exec.scenario.iterationInTest % data.urls.length]
     const response = http.get(url, withProfile({ cookies }))
 
     errorRate.add(response.status >= 400)
