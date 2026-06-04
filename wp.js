@@ -4,7 +4,7 @@ import { Rate } from 'k6/metrics'
 
 import Metrics from './lib/metrics.js'
 import { withProfile } from './lib/profiles.js'
-import { validateSiteUrl, validateSitemapUrl, wpSitemap, responseWasCached, bypassPageCacheCookies } from './lib/helpers.js'
+import { resetSite, validateSiteUrl, validateSitemapUrl, wpSitemap, responseWasCached, bypassPageCacheCookies } from './lib/helpers.js'
 
 export const options = {
     vus: 20,
@@ -28,6 +28,7 @@ const metrics = new Metrics()
 export function setup () {
     const siteUrl = __ENV.SITE_URL
     validateSiteUrl(siteUrl)
+    resetSite(siteUrl)
 
     const sitemapUrl = __ENV.SITEMAP_URL || `${siteUrl}/wp-sitemap.xml`
     validateSitemapUrl(sitemapUrl)
