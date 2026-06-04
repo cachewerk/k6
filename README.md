@@ -21,43 +21,19 @@ k6 run k6-wp.js --env SITE_URL=https://example.com
 k6 run k6-wp.js --vus=100 --duration=10m --env SITE_URL=https://example.com
 ```
 
-### `k6-woo-checkout.js`
-
-Loads the homepage, selects and loads a random category, selects a random product and adds it to the cart, loads the cart page and then places an order.
-
-```bash
-wp option update woocommerce_enable_guest_checkout no --autoload=no
-wp option update woocommerce_enable_signup_and_login_from_checkout yes --autoload=no
-
-k6 run k6-woo-checkout.js --env SITE_URL=https://example.com
-```
-
-Be sure to [reset WooCommerce](#reset-woocommerce) between test runs.
-
-### `k6-woo-customer.js`
-
-Loads the homepage, signs in, views orders and then account details.
-
-```bash
-k6 run k6-woo-customer.js --env SITE_URL=https://example.com
-```
-
-This script requires [seeded users](#seeding-users).
+| Variable | Required | Description |
+| `SITEMAP_URL` | No | Custom sitemap URL (default: `{SITE_URL}/wp-sitemap.xml`). |
+| `PROFILE` | No | Named benchmark profile (see [Profiles](#profiles)). Omit to use the site's default configuration. |
 
 ## Environment variables
 
 | Variable | Required | Description |
 |---|---|---|
 | `SITE_URL` | Yes | Base URL of the site, without trailing slash |
-| `SITEMAP_URL` | No | Custom sitemap URL (default: `{SITE_URL}/wp-sitemap.xml`). `k6-wp.js` only. |
 | `BYPASS_CACHE` | No | When set, sends cookies that bypass full-page caches |
-| `PROFILE` | No | Named benchmark profile (see [Profiles](#profiles)). Omit to use the site's default configuration. `k6-wp.js` only. |
-| `PROFILES` | No | Comma-separated list of profiles to screen. Defaults to all. `k6-screen.js` only. |
-| `DURATION` | No | Seconds per profile (default: `30`). `k6-screen.js` only. |
-| `VUS` | No | Virtual users per profile (default: `10`). `k6-screen.js` only. |
-| `K6_SECRET` | No | Secret token for the reset endpoint. When set, `setup()` flushes the object cache, transients, and WooCommerce sessions before the run. Must match `K6_SECRET` in `wp-config-benchmark.php`. |
-| `OCP_TOKEN` | No | Object Cache Pro license token, passed as `X-OCP-Token`. Required when using an OCP profile. |
 | `PROJECT_ID` | No | k6 Cloud project ID |
+| `OCP_TOKEN` | No | Object Cache Pro license token, passed as `X-OCP-Token`. Required when using an OCP profile. |
+| `K6_SECRET` | No | Secret token for the reset endpoint. When set, `setup()` flushes the object cache, transients, and WooCommerce sessions before the run. Must match `K6_SECRET` in `wp-config-benchmark.php`. |
 
 ## Profiles
 
@@ -114,19 +90,3 @@ k6 run k6-wp.js --env SITE_URL=https://example.com --env PROFILE=ocp-relay --env
 | `replay-r7` | igbinary | lz4 | on |
 
 Profiles are defined in [`lib/profiles.js`](lib/profiles.js). See `__data/README.md` for all supported headers.
-
-## Reset WooCommerce
-
-```
-wp post delete --force $(wp post list --post_type=shop_order --format=ids --posts_per_page=-1)
-wp user delete --yes $(wp user list --role=customer --format=ids --posts_per_page=-1)
-wp cache flush
-```
-
-## Seeding users
-
-Load tests that run with logged in users require 100 seeded users:
-
-```
-for USR_NO in {1..100}; do wp user create "test${USR_NO}" "test${USR_NO}@example.com" --role=subscriber --user_pass=3405691582; done;
-```

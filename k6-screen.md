@@ -17,6 +17,8 @@ K6_SECRET=secret SITE_URL=https://example.com \
     k6 run k6-screen.js -e PROFILES=ocp-relay,ocp-phpredis -e ITERATIONS=100 -e VUS=20
 ```
 
+## Environment variables
+
 | Variable | Default | Description |
 |---|---|---|
 | `PROFILES`   | all profiles | Comma-separated list of profile names to screen |
