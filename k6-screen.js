@@ -11,9 +11,9 @@ const profilesToTest = __ENV.PROFILES
     ? __ENV.PROFILES.split(',').map(p => p.trim())
     : Object.keys(profiles)
 
-const iterations  = parseInt(__ENV.ITERATIONS || '50')
-const vus         = parseInt(__ENV.VUS        || '10')
-const timeoutSecs = parseInt(__ENV.TIMEOUT    || '120')
+const iterations = parseInt(__ENV.ITERATIONS || '50')
+const vus = parseInt(__ENV.VUS || '10')
+const timeoutSecs = parseInt(__ENV.TIMEOUT || '120')
 
 profilesToTest.forEach(name => {
     if (! (name in profiles)) {
@@ -23,19 +23,24 @@ profilesToTest.forEach(name => {
 
 export const options = {
     summaryTimeUnit: 'ms',
-    summaryTrendStats: ['avg', 'med', 'p(90)', 'p(95)', 'p(99)'],
+    summaryTrendStats: [
+        'avg',
+        'med',
+        'p(90)',
+        'p(95)',
+        'p(99)',
+    ],
     thresholds: Object.fromEntries(
         profilesToTest.flatMap(profile => [
-            [`http_req_duration{scenario:${profile}}`,  []],
-            [`wp_ms_cache_ratio{scenario:${profile}}`,  []],
-            [`wp_ms_cache_avg{scenario:${profile}}`,    []],
-            [`redis_ops_per_sec{scenario:${profile}}`,  []],
+            [`http_req_duration{scenario:${profile}}`, []],
+            [`wp_ms_cache_ratio{scenario:${profile}}`, []],
+            [`wp_ms_cache_avg{scenario:${profile}}`, []],
+            [`redis_ops_per_sec{scenario:${profile}}`, []],
         ])
     ),
     scenarios: Object.fromEntries(
         profilesToTest.map((profile, i) => [
-            profile,
-            {
+            profile, {
                 executor: 'per-vu-iterations',
                 vus,
                 iterations,

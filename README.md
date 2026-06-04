@@ -21,59 +21,6 @@ k6 run k6-wp.js --env SITE_URL=https://example.com
 k6 run k6-wp.js --vus=100 --duration=10m --env SITE_URL=https://example.com
 ```
 
-### `k6-screen.js`
-
-Runs multiple profiles sequentially in a single k6 invocation and produces a unified summary with metrics broken out per profile — useful for quickly ranking configurations before committing to full benchmark runs.
-
-Each profile runs `VUS × ITERATIONS` requests. Defaults to all profiles if `PROFILES` is omitted. Resets the site cache before the run if `K6_SECRET` is set.
-
-```bash
-# Screen all profiles (500 requests each, 10 VUs × 50 iterations)
-K6_SECRET=secret SITE_URL=https://example.com k6 run k6-screen.js
-
-# Screen a subset
-K6_SECRET=secret SITE_URL=https://example.com \
-    k6 run k6-screen.js -e PROFILES=ocp-relay,ocp-phpredis,roc-relay,none
-
-# More requests, more VUs
-K6_SECRET=secret SITE_URL=https://example.com \
-    k6 run k6-screen.js -e PROFILES=ocp-relay,ocp-phpredis -e ITERATIONS=100 -e VUS=20
-```
-
-| Variable | Default | Description |
-|---|---|---|
-| `PROFILES`   | all profiles | Comma-separated list of profile names to screen |
-| `ITERATIONS` | `50`         | Iterations each VU runs per profile |
-| `VUS`        | `10`         | Virtual users per profile |
-| `TIMEOUT`    | `120`        | Max seconds per profile before force-stop. Also controls the gap between profiles — increase if a slow profile (e.g. `none`) needs more time to complete its iterations. |
-
-### `har-replay.js`
-
-Replays a sequence of requests captured from Chrome DevTools as a HAR file, sequentially with a single virtual user. Use this to drive the site for corpus capture or to reproduce a specific browsing flow without load.
-
-**Capture workflow:**
-
-1. Open Chrome DevTools → Network tab, check **Preserve log**, perform the flow
-2. Right-click any request → **Save all as HAR with content**
-3. Convert: `k6 convert recording.har -O k6/har-replay.js`
-4. Restore `vus: 1, iterations: 1` in `options` (the converter resets these)
-5. Pass `params` to every `http.get()` / `http.post()` in the generated body
-
-**Running a capture:**
-
-```bash
-# Capture baseline corpus (no prefetch, single alloptions GET)
-k6 run har-replay.js --env SITE_URL=https://example.com --env PROFILE=capture-1 --env OCP_TOKEN=…
-
-# Capture hash-alloptions corpus
-k6 run har-replay.js --env SITE_URL=https://example.com --env PROFILE=capture-2 --env OCP_TOKEN=…
-
-# Capture prefetch corpus — warm the site with a plain run first
-k6 run har-replay.js --env SITE_URL=https://example.com --env PROFILE=capture-3 --env OCP_TOKEN=…
-```
-
-See [HAR capture profiles](#har-capture-1-3) below.
-
 ### `k6-woo-checkout.js`
 
 Loads the homepage, selects and loads a random category, selects a random product and adds it to the cart, loads the cart page and then places an order.

@@ -34,5 +34,5 @@ export default function () {
     check(r1, isOK)
     metrics.addResponseMetrics(r1)
 
-    // sleep(1) // optional pause between requests
+    sleep(1)
 }
