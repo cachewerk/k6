@@ -71,7 +71,7 @@ k6 run k6-wp.js --env SITE_URL=https://example.com --env PROFILE=ocp-relay --env
 | `corpus-a` | scan |
 | `corpus-b` | atomic |
 
-**Benchmark profiles** — direct A/B comparisons. `relay.adaptive` is not a request header; set `REPLAY_RELAY_ADAPTIVE=on/off` separately.
+**Benchmark profiles** — direct A/B comparisons.
 
 | Profile | knob | value |
 |---|---|---|
@@ -81,7 +81,7 @@ k6 run k6-wp.js --env SITE_URL=https://example.com --env PROFILE=ocp-relay --env
 | `prefetch-on` | `prefetch` | true |
 | `client-phpredis` | client | phpredis |
 | `client-relay` | client | relay |
-| `client-relay-adaptive` | client | relay + adaptive (also set `REPLAY_RELAY_ADAPTIVE=on`) |
+| `client-relay-adaptive` | client | relay + `relay.adaptive` on |
 | `php-lz4` | serializer + compression | php + lz4 |
 | `php-zstd` | serializer + compression | php + zstd |
 | `igbinary-lz4` | serializer + compression | igbinary + lz4 |
