@@ -64,30 +64,27 @@ k6 run k6-wp.js --env SITE_URL=https://example.com --env PROFILE=ocp-relay --env
 | `capture-2` | false | true | Hash alloptions — lazy `HGET`/`HMGET`, very different command count |
 | `capture-3` | true | false | Prefetch — batched key preload at request start (warm the site first) |
 
-**Corpus capture (A–H)** — use with `stubs/k6-capture.php` to capture Redis command traces. Vary `prefetch`, `split_alloptions`, and `group_flush`.
+**Corpus capture (A–B)** — use with `stubs/k6-capture.php` to capture Redis command traces. Only varies `group_flush` (the other capture-time knobs — `prefetch`, `split_alloptions` — are A/B benchmarks, not matrix axes).
 
-| Profile | `prefetch` | `split_alloptions` | `group_flush` |
-|---|---|---|---|
-| `corpus-a` | false | false | scan |
-| `corpus-b` | false | false | atomic |
-| `corpus-c` | false | true | scan |
-| `corpus-d` | false | true | atomic |
-| `corpus-e` | true | false | scan |
-| `corpus-f` | true | false | atomic |
-| `corpus-g` | true | true | scan |
-| `corpus-h` | true | true | atomic |
+| Profile | `group_flush` |
+|---|---|
+| `corpus-a` | scan |
+| `corpus-b` | atomic |
 
-**Replay configs (R0–R7)** — vary `serializer` and `compression` for replay runs. `relay.adaptive` is not a request header; set `REPLAY_RELAY_ADAPTIVE=on/off` separately for odd-numbered configs.
+**Benchmark profiles** — direct A/B comparisons. `relay.adaptive` is not a request header; set `REPLAY_RELAY_ADAPTIVE=on/off` separately.
 
-| Profile | `serializer` | `compression` | `relay.adaptive` |
-|---|---|---|---|
-| `replay-r0` | php | none | off |
-| `replay-r1` | php | none | on |
-| `replay-r2` | php | lz4 | off |
-| `replay-r3` | php | lz4 | on |
-| `replay-r4` | igbinary | none | off |
-| `replay-r5` | igbinary | none | on |
-| `replay-r6` | igbinary | lz4 | off |
-| `replay-r7` | igbinary | lz4 | on |
+| Profile | knob | value |
+|---|---|---|
+| `split-off` | `split_alloptions` | false |
+| `split-on` | `split_alloptions` | true |
+| `prefetch-off` | `prefetch` | false |
+| `prefetch-on` | `prefetch` | true |
+| `client-phpredis` | client | phpredis |
+| `client-relay` | client | relay |
+| `client-relay-adaptive` | client | relay + adaptive (also set `REPLAY_RELAY_ADAPTIVE=on`) |
+| `php-lz4` | serializer + compression | php + lz4 |
+| `php-zstd` | serializer + compression | php + zstd |
+| `igbinary-lz4` | serializer + compression | igbinary + lz4 |
+| `igbinary-zstd` | serializer + compression | igbinary + zstd |
 
 Profiles are defined in [`lib/profiles.js`](lib/profiles.js). See `__data/README.md` for all supported headers.
