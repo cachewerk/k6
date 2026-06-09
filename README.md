@@ -56,22 +56,15 @@ k6 run k6-wp.js --env SITE_URL=https://example.com --env PROFILE=ocp-relay --env
 | `roc-phpredis` | Redis Object Cache | PhpRedis |
 | `roc-relay` | Redis Object Cache | Relay |
 
-**HAR capture (1–3)** — use with `har-replay.js` to drive the site for corpus capture. Each profile isolates one variable that changes the Redis command stream. Only read-only (frontend) URLs; `group_flush` is a no-op here so `scan` is used throughout.
+**Capture profiles** — use with `har-replay.js` + the capture mu-plugin (`stubs/k6-capture.php`) to record one Redis command trace (corpus) per configuration. Each flips exactly one **capture-time** knob — one that changes *which* commands run, so it can't be reproduced at replay and needs its own corpus. All capture under PhpRedis (Relay's client-side cache would drop round-trips and record an incomplete stream).
 
-| Profile | `prefetch` | `split_alloptions` | What it captures |
-|---|---|---|---|
-| `capture-1` | false | false | Baseline — single alloptions `GET`, no prefetch |
-| `capture-2` | false | true | Hash alloptions — lazy `HGET`/`HMGET`, very different command count |
-| `capture-3` | true | false | Prefetch — batched key preload at request start (warm the site first) |
+| Profile | knob vs baseline | command-stream effect |
+|---|---|---|
+| `capture-baseline` | — | plain keys, single alloptions `GET`, no prefetch |
+| `capture-hfe` | `group_flush=atomic` | groups-as-hashes + hash-field-expiry: every `GET`→`HGET`, sets become HFE field writes — **changes reads, not just flushes** |
+| `capture-prefetch` | `prefetch=true` | batched key preload pipeline at request start (warm the site first) |
 
-**Corpus capture (A–B)** — use with `stubs/k6-capture.php` to capture Redis command traces. Only varies `group_flush` (the other capture-time knobs — `prefetch`, `split_alloptions` — are A/B benchmarks, not matrix axes).
-
-| Profile | `group_flush` |
-|---|---|
-| `corpus-a` | scan |
-| `corpus-b` | atomic |
-
-**Benchmark profiles** — direct A/B comparisons.
+**Benchmark profiles** — direct A/B comparisons against the live site (`k6-wp.js`).
 
 | Profile | knob | value |
 |---|---|---|

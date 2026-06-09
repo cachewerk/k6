@@ -15,14 +15,14 @@ Replays a sequence of requests captured from Chrome DevTools as a HAR file, sequ
 **Running a capture:**
 
 ```bash
-# Capture baseline corpus (no prefetch, single alloptions GET)
-k6 run har-replay.js --env SITE_URL=https://example.com --env PROFILE=capture-1 --env OCP_TOKEN=…
+# Capture baseline corpus (plain keys, single alloptions GET, no prefetch)
+k6 run har-replay.js --env SITE_URL=https://example.com --env PROFILE=capture-baseline --env OCP_TOKEN=…
 
-# Capture hash-alloptions corpus
-k6 run har-replay.js --env SITE_URL=https://example.com --env PROFILE=capture-2 --env OCP_TOKEN=…
+# Capture HFE corpus (group_flush=atomic → groups-as-hashes, GET→HGET)
+k6 run har-replay.js --env SITE_URL=https://example.com --env PROFILE=capture-hfe --env OCP_TOKEN=…
 
-# Capture prefetch corpus (warm the site with a plain run first?)
-k6 run har-replay.js --env SITE_URL=https://example.com --env PROFILE=capture-3 --env OCP_TOKEN=…
+# Capture prefetch corpus (warm the site with a plain run first, then capture)
+k6 run har-replay.js --env SITE_URL=https://example.com --env PROFILE=capture-prefetch --env OCP_TOKEN=…
 ```
 
-See [HAR capture profiles](#har-capture-1-3) below.
+See [Available profiles](README.md#available-profiles) for the full list.
