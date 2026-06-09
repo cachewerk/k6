@@ -12,60 +12,79 @@ When Object Cache Pro is installed, custom metrics for [WordPress, Redis and Rel
 
 ## Tests
 
-### `wp.js`
+### `k6-wp.js`
 
-Fetches all WordPress sitemaps and requests random URLs.
-
-```bash
-k6 run wp.js --env SITE_URL=https://example.com --env BYPASS_CACHE=1
-k6 run wp.js --vus=100 --duration=10m --env SITE_URL=https://example.com --env BYPASS_CACHE=1
-```
-
-### `woo-checkout.js`
-
-Loads the homepage, selects and loads a random category, selects a random product and adds it to the cart, loads the cart page and then places an order.
+Fetches all WordPress sitemaps and iterates through URLs sequentially for reproducible runs.
 
 ```bash
-wp option update woocommerce_enable_guest_checkout no --autoload=no
-wp option update woocommerce_enable_signup_and_login_from_checkout yes --autoload=no
-
-k6 run woo-checkout.js --env SITE_URL=https://example.com --env BYPASS_CACHE=1
+k6 run k6-wp.js --env SITE_URL=https://example.com
+k6 run k6-wp.js --vus=100 --duration=10m --env SITE_URL=https://example.com
 ```
 
-Be sure to [reset WooCommerce](#reset-woocommerce) between test runs.
-
-### `woo-customer.js`
-
-Loads the homepage, signs in, views at orders and then their account details.
-
-```bash
-k6 run woo-customer.js --env SITE_URL=https://example.com --env BYPASS_CACHE=1
-```
-
-This script requires [seeded users](#seeding-users).
-
-## Reset WooCommerce
-
-```
-wp post delete --force $(wp post list --post_type=shop_order --format=ids --posts_per_page=-1)
-wp user delete --yes $(wp user list --role=customer --format=ids --posts_per_page=-1)
-wp cache flush
-```
-
-## Seeding users
-
-Load tests that run with logged in users, use this seed command to create 100 users:
-
-```
-for USR_NO in {1..100}; do wp user create "test${USR_NO}" "test${USR_NO}@example.com" --role=subscriber --user_pass=3405691582; done;
-```
+| Variable | Required | Description |
+|---|---|---|
+| `SITEMAP_URL` | No | Custom sitemap URL (default: `{SITE_URL}/wp-sitemap.xml`). |
+| `PROFILE` | No | Named benchmark profile (see [Profiles](#profiles)). Omit to use the site's default configuration. |
 
 ## Environment variables
 
-### Project ID
+| Variable | Required | Description |
+|---|---|---|
+| `SITE_URL` | Yes | Base URL of the site, without trailing slash |
+| `BYPASS_CACHE` | No | When set, sends cookies that bypass full-page caches |
+| `PROJECT_ID` | No | k6 Cloud project ID |
+| `OCP_TOKEN` | No | Object Cache Pro license token, passed as `X-OCP-Token`. Required when using an OCP profile. |
+| `K6_SECRET` | No | Secret token for the reset endpoint. When set, `setup()` flushes the object cache, transients, and WooCommerce sessions before the run. Must match `K6_SECRET` in `wp-config-benchmark.php`. |
 
-You can set the k6 Cloud "Project ID" using the `PROJECT_ID` environment variable.
+## Profiles
+
+Profiles select which object cache drop-in and client to use for a run, applied via HTTP request headers. Omitting `PROFILE` uses the site's PHP configuration unchanged.
 
 ```bash
-k6 cloud wp.js --env PROJECT_ID=123456 --env SITE_URL=https://example.com
+k6 run k6-wp.js --env SITE_URL=https://example.com --env PROFILE=ocp-relay --env OCP_TOKEN=abc123
 ```
+
+### Available profiles
+
+**Base**
+
+| Profile | Drop-in | Client |
+|---|---|---|
+| `none` | WordPress built-in memory cache | — |
+| `ocp-relay` | Object Cache Pro | Relay |
+| `ocp-phpredis` | Object Cache Pro | PhpRedis |
+| `roc-phpredis` | Redis Object Cache | PhpRedis |
+| `roc-relay` | Redis Object Cache | Relay |
+
+**HAR capture (1–3)** — use with `har-replay.js` to drive the site for corpus capture. Each profile isolates one variable that changes the Redis command stream. Only read-only (frontend) URLs; `group_flush` is a no-op here so `scan` is used throughout.
+
+| Profile | `prefetch` | `split_alloptions` | What it captures |
+|---|---|---|---|
+| `capture-1` | false | false | Baseline — single alloptions `GET`, no prefetch |
+| `capture-2` | false | true | Hash alloptions — lazy `HGET`/`HMGET`, very different command count |
+| `capture-3` | true | false | Prefetch — batched key preload at request start (warm the site first) |
+
+**Corpus capture (A–B)** — use with `stubs/k6-capture.php` to capture Redis command traces. Only varies `group_flush` (the other capture-time knobs — `prefetch`, `split_alloptions` — are A/B benchmarks, not matrix axes).
+
+| Profile | `group_flush` |
+|---|---|
+| `corpus-a` | scan |
+| `corpus-b` | atomic |
+
+**Benchmark profiles** — direct A/B comparisons.
+
+| Profile | knob | value |
+|---|---|---|
+| `split-off` | `split_alloptions` | false |
+| `split-on` | `split_alloptions` | true |
+| `prefetch-off` | `prefetch` | false |
+| `prefetch-on` | `prefetch` | true |
+| `client-phpredis` | client | phpredis |
+| `client-relay` | client | relay |
+| `client-relay-adaptive` | client | relay + `relay.adaptive` on |
+| `php-lz4` | serializer + compression | php + lz4 |
+| `php-zstd` | serializer + compression | php + zstd |
+| `igbinary-lz4` | serializer + compression | igbinary + lz4 |
+| `igbinary-zstd` | serializer + compression | igbinary + zstd |
+
+Profiles are defined in [`lib/profiles.js`](lib/profiles.js). See `__data/README.md` for all supported headers.

@@ -1,8 +1,10 @@
 import http from 'k6/http'
+import exec from 'k6/execution'
 import { Rate } from 'k6/metrics'
 
 import Metrics from './lib/metrics.js'
-import { sample, validateSiteUrl, validateSitemapUrl, wpSitemap, responseWasCached, bypassPageCacheCookies } from './lib/helpers.js'
+import { withProfile } from './lib/profiles.js'
+import { resetSite, validateSiteUrl, validateSitemapUrl, wpSitemap, responseWasCached, bypassPageCacheCookies } from './lib/helpers.js'
 
 export const options = {
     vus: 20,
@@ -26,6 +28,7 @@ const metrics = new Metrics()
 export function setup () {
     const siteUrl = __ENV.SITE_URL
     validateSiteUrl(siteUrl)
+    resetSite(siteUrl)
 
     const sitemapUrl = __ENV.SITEMAP_URL || `${siteUrl}/wp-sitemap.xml`
     validateSitemapUrl(sitemapUrl)
@@ -45,10 +48,10 @@ export function teardown (data) {
 }
 
 export default function (data) {
-    let cookies = __ENV.BYPASS_CACHE ? bypassPageCacheCookies() : {}
+    const cookies = __ENV.BYPASS_CACHE ? bypassPageCacheCookies() : {}
 
-    const url = sample(data.urls)
-    const response = http.get(url, { cookies })
+    const url = data.urls[exec.scenario.iterationInTest % data.urls.length]
+    const response = http.get(url, withProfile({ cookies }))
 
     errorRate.add(response.status >= 400)
     responseCacheRate.add(responseWasCached(response))

@@ -3,6 +3,7 @@ import { Rate } from 'k6/metrics'
 import { check, group, fail, sleep } from 'k6'
 
 import Metrics from './lib/metrics.js';
+import { withProfile } from './lib/profiles.js'
 import { isOK, itemAddedToCart, cartHasProduct, orderWasPlaced } from './lib/checks.js'
 import { rand, sample, validateSiteUrl, responseWasCached, bypassPageCacheCookies } from './lib/helpers.js'
 
@@ -75,7 +76,7 @@ export default function () {
     }
 
     const categories = group('Load homepage', function () {
-        const response = http.get(siteUrl, { jar })
+        const response = http.get(siteUrl, withProfile({ jar }))
 
         check(response, isOK)
             || (errorRate.add(1) && fail('status code was *not* 200'))
@@ -93,7 +94,7 @@ export default function () {
 
     const products = group('Load category', function () {
         const category = sample(categories)
-        const response = http.get(category, { jar })
+        const response = http.get(category, withProfile({ jar }))
 
         check(response, isOK)
             || (errorRate.add(1) && fail('status code was *not* 200'))
@@ -112,7 +113,7 @@ export default function () {
 
     group('Load and add product to cart', function () {
         const product = sample(products)
-        const response = http.get(product, { jar })
+        const response = http.get(product, withProfile({ jar }))
 
         check(response, isOK)
             || (errorRate.add(1) && fail('status code was *not* 200'))
@@ -132,7 +133,7 @@ export default function () {
         const formResponse = response.submitForm({
             formSelector: 'form.cart',
             fields,
-            params: { jar },
+            params: withProfile({ jar }),
         })
 
         check(formResponse, isOK)
@@ -148,7 +149,7 @@ export default function () {
     sleep(rand(pause.min, pause.max))
 
     group('Load cart', function () {
-        const response = http.get(`${siteUrl}/cart`, { jar })
+        const response = http.get(`${siteUrl}/cart`, withProfile({ jar }))
 
         check(response, isOK)
             || (errorRate.add(1) && fail('status code was *not* 200'))
@@ -163,7 +164,7 @@ export default function () {
     sleep(rand(pause.min, pause.max))
 
     group('Place order', function () {
-        const response = http.get(`${siteUrl}/checkout`, { jar })
+        const response = http.get(`${siteUrl}/checkout`, withProfile({ jar }))
 
         check(response, isOK)
             || (errorRate.add(1) && fail('status code was *not* 200'))
@@ -188,7 +189,7 @@ export default function () {
 
         const formResponse = response.submitForm({
             formSelector: 'form[name="checkout"]',
-            params: { jar },
+            params: withProfile({ jar }),
             fields,
         })
 
