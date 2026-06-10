@@ -33,7 +33,6 @@ k6 run k6-wp.js --vus=100 --duration=10m --env SITE_URL=https://example.com
 | `SITE_URL` | Yes | Base URL of the site, without trailing slash |
 | `BYPASS_CACHE` | No | When set, sends cookies that bypass full-page caches |
 | `PROJECT_ID` | No | k6 Cloud project ID |
-| `OCP_TOKEN` | No | Object Cache Pro license token, passed as `X-OCP-Token`. Required when using an OCP profile. |
 | `K6_SECRET` | No | Secret token for the reset endpoint. When set, `setup()` flushes the object cache, transients, and WooCommerce sessions before the run. Must match `K6_SECRET` in `wp-config-benchmark.php`. |
 
 ## Profiles
@@ -41,7 +40,7 @@ k6 run k6-wp.js --vus=100 --duration=10m --env SITE_URL=https://example.com
 Profiles select which object cache drop-in and client to use for a run, applied via HTTP request headers. Omitting `PROFILE` uses the site's PHP configuration unchanged.
 
 ```bash
-k6 run k6-wp.js --env SITE_URL=https://example.com --env PROFILE=ocp-relay --env OCP_TOKEN=abc123
+k6 run k6-wp.js --env SITE_URL=https://example.com --env PROFILE=ocp-relay
 ```
 
 ### Available profiles

@@ -21,7 +21,7 @@ export default function () {
     const jar = new http.CookieJar()
 
     // withProfile injects OCP/ROC headers when PROFILE env var is set.
-    // Example: k6 run har-replay.js --env SITE_URL=https://… --env PROFILE=ocp-relay --env OCP_TOKEN=…
+    // Example: k6 run har-replay.js --env SITE_URL=https://… --env PROFILE=ocp-relay
     // Valid profiles: none, ocp-relay, ocp-phpredis, roc-phpredis, roc-relay,
     // capture-{baseline,hfe,prefetch}, {split,prefetch}-{on,off}, client-{phpredis,relay,relay-adaptive}, {php,igbinary}-{lz4,zstd}
     const params = withProfile({ jar })

@@ -16,13 +16,13 @@ Replays a sequence of requests captured from Chrome DevTools as a HAR file, sequ
 
 ```bash
 # Capture baseline corpus (plain keys, single alloptions GET, no prefetch)
-k6 run har-replay.js --env SITE_URL=https://example.com --env PROFILE=capture-baseline --env OCP_TOKEN=…
+k6 run har-replay.js --env SITE_URL=https://example.com --env PROFILE=capture-baseline
 
 # Capture HFE corpus (group_flush=atomic → groups-as-hashes, GET→HGET)
-k6 run har-replay.js --env SITE_URL=https://example.com --env PROFILE=capture-hfe --env OCP_TOKEN=…
+k6 run har-replay.js --env SITE_URL=https://example.com --env PROFILE=capture-hfe
 
 # Capture prefetch corpus (warm the site with a plain run first, then capture)
-k6 run har-replay.js --env SITE_URL=https://example.com --env PROFILE=capture-prefetch --env OCP_TOKEN=…
+k6 run har-replay.js --env SITE_URL=https://example.com --env PROFILE=capture-prefetch
 ```
 
 See [Available profiles](README.md#available-profiles) for the full list.
