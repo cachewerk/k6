@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
 # Capture replay corpora by driving the recorded HAR chain (har-replay.js) under
-# each capture profile, then assembling corpus + seed with the petfood .CAPTURE
+# each capture profile, then assembling corpus + seed with the example .CAPTURE
 # tools. One recorded HAR (the request chain) → three corpora:
 #
 #   capture-baseline   plain string keys   GET / SET
@@ -25,6 +25,7 @@
 #   SITE_URL     default https://example.test
 #   K6_SECRET    default k6-benchmark-secret   (must match wp-config-benchmark.php)
 #   CAPTURE_DIR  default $HOME/Development/Sites/example/.CAPTURE
+#   HAR_FILE     path to the recorded HAR to replay (required)
 
 set -euo pipefail
 
@@ -34,7 +35,8 @@ SITE_URL="${SITE_URL:-https://example.test}"
 K6_SECRET="${K6_SECRET:-k6-benchmark-secret}"
 CAPTURE_DIR="${CAPTURE_DIR:-$HOME/Development/Sites/example/.CAPTURE}"
 
-HAR_SCRIPT="$HERE/har-replay.js"
+HAR_SCRIPT="$HERE/../har-replay.js"
+HAR_FILE="${HAR_FILE:-}"
 BUILD_CORPUS="$CAPTURE_DIR/bin/build-corpus.php"
 BUILD_SEED="$CAPTURE_DIR/bin/build-seed.php"
 RAW_DIR="$CAPTURE_DIR/corpus/raw"
@@ -50,6 +52,7 @@ preflight() {
     command -v k6  >/dev/null || { log "k6 not installed"; exit 1; }
     command -v php >/dev/null || { log "php not installed"; exit 1; }
     [ -f "$HAR_SCRIPT" ]   || { log "missing $HAR_SCRIPT"; exit 1; }
+    { [ -n "$HAR_FILE" ] && [ -f "$HAR_FILE" ]; } || { log "set HAR_FILE=/path/to/recording.har (the HAR to replay)"; exit 1; }
     [ -f "$BUILD_CORPUS" ] || { log "missing $BUILD_CORPUS — set CAPTURE_DIR"; exit 1; }
     [ -f "$BUILD_SEED" ]   || { log "missing $BUILD_SEED — set CAPTURE_DIR"; exit 1; }
     mkdir -p "$RAW_DIR"
@@ -75,7 +78,7 @@ drive() {
     local profile="$1"
     rm -f "$RAW_DIR"/*.json "$RAW_DIR"/.*.tmp 2>/dev/null || true
     k6 run --quiet --insecure-skip-tls-verify \
-        --env SITE_URL="$SITE_URL" --env PROFILE="$profile" "$HAR_SCRIPT"
+        --env HAR="$HAR_FILE" --env SITE_URL="$SITE_URL" --env PROFILE="$profile" "$HAR_SCRIPT"
 }
 
 capture_profile() {
