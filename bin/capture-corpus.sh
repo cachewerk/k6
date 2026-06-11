@@ -64,13 +64,40 @@ preflight() {
     log "capture dir: $CAPTURE_DIR"
 }
 
-# Cold start: flush the object cache + transients + WC sessions.
+# OCP/config headers for a profile, mirroring lib/profiles/capture.js — but
+# WITHOUT X-K6-Capture (the reset request itself must not be captured). Keep in
+# sync with capture.js if the profiles change.
+profile_headers() {
+    case "$1" in
+        capture-baseline)
+            printf '%s\n' 'X-Dropin: ocp' 'X-OCP-Client: phpredis' \
+                'X-OCP-Group-Flush: scan' 'X-OCP-Prefetch: false' ;;
+        capture-hfe)
+            printf '%s\n' 'X-Dropin: ocp' 'X-OCP-Client: phpredis' \
+                'X-OCP-Group-Flush: atomic' 'X-OCP-Prefetch: false' ;;
+        capture-prefetch)
+            printf '%s\n' 'X-Dropin: ocp' 'X-OCP-Client: phpredis' \
+                'X-OCP-Group-Flush: scan' 'X-OCP-Split-Alloptions: false' \
+                'X-OCP-Prefetch: true' ;;
+        *) log "  warning: no OCP headers mapped for profile '$1'" ;;
+    esac
+}
+
+# Cold start: flush the object cache + transients + WC sessions. Sends the
+# profile's OCP headers so OCP rewrites objectcache:meta in the SAME mode the
+# drive will use; otherwise the first drive request sees a mismatched meta and
+# trips a one-off integrity FLUSHDB (e.g. atomic profile vs the default scan meta).
 reset_cache() {
-    local code
-    code=$("${CURL[@]}" -X POST -H "X-K6-Secret: $K6_SECRET" \
+    local profile="$1"
+    local code headers=() h
+    while IFS= read -r h; do
+        [ -n "$h" ] && headers+=(-H "$h")
+    done < <(profile_headers "$profile")
+
+    code=$("${CURL[@]}" -X POST -H "X-K6-Secret: $K6_SECRET" "${headers[@]}" \
         -o /dev/null -w '%{http_code}' "$SITE_URL/wp-json/k6/v1/reset")
     [ "$code" = "200" ] || { log "  reset failed (HTTP $code) — check K6_SECRET"; exit 1; }
-    log "  cache reset"
+    log "  cache reset ($profile mode)"
 }
 
 # Drive the HAR chain once (vus:1, iterations:1) under a profile, capturing.
@@ -84,7 +111,14 @@ drive() {
 capture_profile() {
     local profile="$1"
     log "== $profile =="
-    reset_cache
+
+    # Start clean: drop this profile's previous cold/warm corpora + seed so a
+    # shorter or failed prior run can't leave stale traces that build-seed
+    # (which globs cold/) would silently fold into the new seed.
+    rm -rf "$CORPUS_DIR/$profile/cold" "$CORPUS_DIR/$profile/warm"
+    rm -f  "$CORPUS_DIR/$profile/seed.json"
+
+    reset_cache "$profile"
 
     log "  [cold] drive + capture (carries values -> seed)"
     drive "$profile"
